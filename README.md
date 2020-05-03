@@ -1,12 +1,10 @@
 # pyhsslms
-HSS/LMS Hash-based Digital Signatures
-
 
 HSS/LMS Digital Signature library for Python
 --------------------------------------------
-[![PyPI](https://img.shields.io/pypi/v/pyhsslms.svg?maxAge=2592000)](https://pypi.org/project/pyhsslms)
-[![Python Versions](https://img.shields.io/pypi/pyversions/pyhsslms.svg)](https://pypi.org/project/pyhsslms/)
-[![GitHub license](https://img.shields.io/badge/license-BSD-blue.svg)](https://raw.githubusercontent.com/russhousley/pyhsslms/master/LICENSE.txt)
+[PyPI](https://pypi.org/project/pyhsslms)
+[Python Versions](https://pypi.org/project/pyhsslms/)
+[GitHub license](https://raw.githubusercontent.com/russhousley/pyhsslms/master/LICENSE.txt)
 
 This Python package contains a free and open source implementation of
 HSS/LMS Hash-based Digital Signatures as defined in [RFC 8554](https://www.rfc-editor.org/rfc/rfc8554.txt).
