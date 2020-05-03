@@ -46,7 +46,7 @@ classifiers = """\
 Development Status :: 5 - Production/Stable
 Environment :: Console
 Intended Audience :: Developers
-License :: OSI Approved :: BSD License
+License :: OSI Approved :: MIT License
 Natural Language :: English
 Operating System :: OS Independent
 Programming Language :: Python :: 2
@@ -56,7 +56,7 @@ Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
 Programming Language :: Python :: 3.8
-Topic :: Digital Signature
+Topic :: Security :: Cryptography
 Topic :: Software Development :: Libraries :: Python Modules
 """
 
