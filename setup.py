@@ -102,9 +102,7 @@ params.update({
     'platforms': ['any'],
     'classifiers': [x for x in classifiers.split('\n') if x],
     'license': 'MIT',
-    'packages': ['pyhsslms',
-                 'pyhsslms.hsslms',
-                 'pyhsslms.compat'],
+    'packages': ['pyhsslms'],
     'python_requires': '>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*'})
 
 
