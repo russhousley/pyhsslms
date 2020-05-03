@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# hsslms
+# hsslms.py
 #
 # This provides a command line interface for the pyhsslms.py
 # implementation of HSS/LMS Hash-based Signatures as defined
