@@ -3,7 +3,9 @@
 HSS/LMS Digital Signature library for Python
 --------------------------------------------
 [PyPI](https://pypi.org/project/pyhsslms)
+
 [Python Versions](https://pypi.org/project/pyhsslms/)
+
 [GitHub license](https://raw.githubusercontent.com/russhousley/pyhsslms/master/LICENSE.txt)
 
 This Python package contains a free and open source implementation of
