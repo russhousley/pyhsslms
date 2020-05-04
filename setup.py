@@ -103,8 +103,8 @@ params.update({
     'classifiers': [x for x in classifiers.split('\n') if x],
     'license': 'MIT',
     'packages': ['pyhsslms'],
+    'entry_points': {'console_scripts': ['hsslms = pyhsslms.hsslms:main']},
     'python_requires': '>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*'})
-
 
 class PyTest(Command):
     user_options = []
