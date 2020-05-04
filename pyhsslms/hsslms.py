@@ -40,33 +40,34 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import sys
+import os.path
 import argparse
 import pyhsslms
-
-VERSION = "1.0.0"
+from .__init__ import __version__ as VERSION
 
 
 def usage(name):
     """
     Display usage information and then exit.
     """
+    cmd_name = os.path.basename(name)
     print("commands:")
-    print(name + " genkey <keyname> [<genparms>]")
+    print(cmd_name + " genkey <keyname> [<genparms>]")
     print("   creates <keyname>.prv and <keyname>.pub")
     print(" ")
-    print(name + " sign <keyname> <filename>")
+    print(cmd_name + " sign <keyname> <filename>")
     print("   updates <keyname>.prv and makes the signature in <filename>.sig")
     print(" ")
-    print(name + " verify <keyname> <filename>")
+    print(cmd_name + " verify <keyname> <filename>")
     print("   verifies the signature in <filename>.sig with <keyname>.pub")
     print(" ")
-    print(name + " showprv <keyname>")
+    print(cmd_name + " showprv <keyname>")
     print("   display <keyname>.prv")
     print(" ")
-    print(name + " showpub <keyname>")
+    print(cmd_name + " showpub <keyname>")
     print("   display <keyname>.pub")
     print(" ")
-    print(name + " showsig <filename>")
+    print(cmd_name + " showsig <filename>")
     print("   display <filename>.sig")
     print(" ")
     print("optional <genparms> for the genkey command:")
@@ -87,7 +88,7 @@ def usage(name):
     sys.exit(1)
 
 
-if __name__ == "__main__":
+def main():
     """
     Command line interface for pyhsslms.py.
     """
@@ -105,7 +106,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if sys.argv[1] == 'version' or '--version' in sys.argv or '-v' in sys.argv:
-        print(sys.argv[0] + " " + VERSION)
+        print(os.path.basename(sys.argv[0]) + " " + VERSION)
         sys.exit(1)
 
     if sys.argv[1] in ['genkey', 'keygen']:
