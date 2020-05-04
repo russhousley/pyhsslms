@@ -46,9 +46,9 @@
 
 import os
 import hashlib
-from compat import NoFileError, FoundFileError
-from compat import randBytes, toBytes, toHex, fromHex
-from compat import charNum, u32, u16, u8, int32
+from .compat import NoFileError, FoundFileError
+from .compat import randBytes, toBytes, toHex, fromHex
+from .compat import charNum, u32, u16, u8, int32
 
 
 # ----------------------------------------------------------------------
