@@ -38,7 +38,7 @@
 import os
 import unittest
 import pyhsslms
-from compat import fromHex, toBytes
+from pyhsslms.compat import fromHex, toBytes
 
 
 def mangle(buffer):
