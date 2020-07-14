@@ -57,7 +57,9 @@ if version_info[0] <= 2:
     FoundFileError = IOError
 
 else:
-    from secrets import token_bytes as random_bytes
+    # secrets is not available until Python3.6.
+    # from secrets import token_bytes as random_bytes
+    import os
 
     u32 = lambda i: i.to_bytes(4, byteorder='big', signed=False)
     u16 = lambda i: i.to_bytes(2, byteorder='big', signed=False)
@@ -65,7 +67,8 @@ else:
     fromHex = bytes.fromhex
     toHex = lambda x: x.hex()
     toBytes = lambda x: x.encode()
-    randBytes = random_bytes
+    # randBytes = random_bytes
+    randBytes = os.urandom
     int32 = lambda x: int.from_bytes(x, byteorder='big')
     charNum = lambda x: x
     NoFileError = FileNotFoundError

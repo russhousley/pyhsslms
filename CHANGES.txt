@@ -1,0 +1,12 @@
+
+
+Revision 1.0.0, released 4-May-2020
+-----------------------------------
+
+- Initial release.
+
+
+Revision 1.0.1, released 14-Jul-2020
+------------------------------------
+
+- Use os.urandom instead of secrets, which is not available until Python3.6.
