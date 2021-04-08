@@ -10,3 +10,16 @@ Revision 1.0.1, released 14-Jul-2020
 ------------------------------------
 
 - Use os.urandom instead of secrets, which is not available until Python3.6.
+
+
+Revision 1.0.2, released 8-Apr-2021
+------------------------------------
+
+- Prepare for parameter sets that use SHAKE256:
+  -- Use pycryptodomex before Python3.6.
+  -- Use hashlib for Python3.6 and later.
+  -- Add tests for SHA256 and SHAKE256.
+
+- Clean up the random number generation:
+  -- Use os.urandom before Python3.6.
+  -- Use secrets.token_bytes for Python3.6 and later.
