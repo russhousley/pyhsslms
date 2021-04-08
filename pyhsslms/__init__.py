@@ -1,5 +1,5 @@
 # https://www.python.org/dev/peps/pep-0396/
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 from .pyhsslms import lmots_sha256_n32_w1
 from .pyhsslms import lmots_sha256_n32_w2

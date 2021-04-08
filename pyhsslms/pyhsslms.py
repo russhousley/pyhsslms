@@ -11,7 +11,7 @@
 # by another program that allows different tree sizes in the hierarchy.
 #
 #
-# Copyright (c) 2020, Vigil Security, LLC
+# Copyright (c) 2020-2021, Vigil Security, LLC
 # All rights reserved.
 #
 # Redistribution and use, with or without modification, are permitted
@@ -48,7 +48,7 @@ import os
 import hashlib
 from .compat import NoFileError, FoundFileError
 from .compat import randBytes, toBytes, toHex, fromHex
-from .compat import charNum, u32, u16, u8, int32
+from .compat import charNum, u32, u16, u8, int32, shake256
 
 
 # ----------------------------------------------------------------------
@@ -63,11 +63,11 @@ lmots_sha256_n32_w4 = fromHex('00000003')
 lmots_sha256_n32_w8 = fromHex('00000004')
 
 lmots_params = {
-    #                     n   p    w  ls
-    lmots_sha256_n32_w1: (32, 265, 1, 7), 
-    lmots_sha256_n32_w2: (32, 133, 2, 6), 
-    lmots_sha256_n32_w4: (32, 67,  4, 4), 
-    lmots_sha256_n32_w8: (32, 34,  8, 0) }
+    #                     alg       n   p    w  ls
+    lmots_sha256_n32_w1: ('sha256', 32, 265, 1, 7), 
+    lmots_sha256_n32_w2: ('sha256', 32, 133, 2, 6), 
+    lmots_sha256_n32_w4: ('sha256', 32, 67,  4, 4), 
+    lmots_sha256_n32_w8: ('sha256', 32, 34,  8, 0) }
 
 
 # LMS typecodes and parameters
@@ -79,12 +79,12 @@ lms_sha256_m32_h20 = fromHex('00000008')
 lms_sha256_m32_h25 = fromHex('00000009')
 
 lms_params = {
-    #                    m   h 
-    lms_sha256_m32_h5:  (32, 5), 
-    lms_sha256_m32_h10: (32, 10), 
-    lms_sha256_m32_h15: (32, 15), 
-    lms_sha256_m32_h20: (32, 20),
-    lms_sha256_m32_h25: (32, 25) }
+    #                    alg       m   h 
+    lms_sha256_m32_h5:  ('sha256', 32, 5), 
+    lms_sha256_m32_h10: ('sha256', 32, 10), 
+    lms_sha256_m32_h15: ('sha256', 32, 15), 
+    lms_sha256_m32_h20: ('sha256', 32, 20),
+    lms_sha256_m32_h25: ('sha256', 32, 25) }
 
 
 # Size-related constants
@@ -107,28 +107,79 @@ D_PRG  = fromHex('ff')   # for computing LMS private keys
 #
 err_pub_file_not_found    = 'public key file not found'
 err_unknown_typecode      = 'unrecognized typecode'
+err_bad_algorithm         = 'unsupported hash algorithm'
 err_bad_length            = 'parameter has wrong length'
 err_bad_value             = 'parameter has unknown value'
 err_bad_number_of_levels  = 'unsupported number of levels'
 err_private_key_exhausted = 'private key is exhausted'
-
+err_algorithm_mismatch    = 'LMOTS and LMS with different hash algorithms'
 
 # ----------------------------------------------------------------------
 # The internal utility routines
 # ----------------------------------------------------------------------
 
-def H(buf, rvlen):
+def H(alg, buf, rvlen):
     """
-    SHA256 hash function
+    Hash a buffer
+    :param alg: the hash algorithm to use
     :param buf: input to be hashed
     :param rvlen: length of the returned value
     :return: hash value, either 24 bytes or 32 bytes
     """
     if rvlen not in (32, 24):
         raise ValueError(err_bad_length, str(rvlen))
-    h = hashlib.sha256()
+    if alg == 'sha256':
+        h = hashlib.sha256()
+        h.update(buf)
+        rv = h.digest()[0:rvlen]
+    elif alg == 'shake256':
+        h = shake256()
+        h.update(buf)
+        rv = h.digest(rvlen)
+    else:
+        raise ValueError(err_bad_algorithm, alg)
+    return rv
+
+
+def H_start(alg):
+    """
+    Start a hash computation
+    :param alg: the hash algorithm to use
+    :return: a handle for H_update and H_finish
+    """
+    if alg == 'sha256':
+        h = hashlib.sha256()
+    elif alg == 'shake256':
+        h = shake256()
+    else:
+        raise ValueError(err_bad_algorithm, alg)
+    return h
+
+
+def H_update(h, buf):
+    """
+    Update a hash computation
+    :param h: the handle from H_start
+    :param buf: input for the hash computation
+    """
     h.update(buf)
-    return h.digest()[0:rvlen]
+    return
+
+
+def H_finish(h, rvlen):
+    """
+    Finish a hash computation
+    :param h: the handle from H_start
+    :param rvlen: length of the returned value
+    :return: hash value, either 24 bytes or 32 bytes
+    """
+    if rvlen not in (32, 24):
+        raise ValueError(err_bad_length, str(rvlen))
+    if h.name == 'sha256':
+        rv = h.digest()[0:rvlen]
+    elif h.name == 'shake_256':
+        rv = h.digest(rvlen)
+    return rv
 
 
 def coef(S, i, w):
@@ -186,19 +237,19 @@ class LmotsSignature():
         return self.type + self.C + serialize_list(self.y)
 
     def buildPublic(self, S, message):
-        n, p, w, ls = lmots_params[self.type]
+        alg, n, p, w, ls = lmots_params[self.type]
         if len(S) != LenS:
             raise ValueError(err_bad_length, str(len(S)))
-        hash1 = H(S + D_MESG + self.C + message, n)
+        hash1 = H(alg, S + D_MESG + self.C + message, n)
         V = hash1 + checksum(hash1, w, ls)
-        hash = hashlib.sha256()
-        hash.update(S + D_PBLC)
+        hash = H_start(alg)
+        H_update(hash, S + D_PBLC)
         for i, y in enumerate(self.y):
             tmp = y
             for j in range(coef(V, i, w), (2**w)-1):
-                tmp = H(S + u16(i) + u8(j) + tmp, n)
-            hash.update(tmp)
-        return hash.digest()[0:n]
+                tmp = H(alg, S + u16(i) + u8(j) + tmp, n)
+            H_update(hash, tmp)
+        return H_finish(hash, n)
 
     @classmethod
     def deserialize(cls, buffer):
@@ -207,7 +258,7 @@ class LmotsSignature():
         lmots_type = buffer[0:4]
         if lmots_type not in lmots_params:
            raise ValueError(err_unknown_typecode, toHex(lmots_type))
-        n, p, w, ls = lmots_params[lmots_type]
+        alg, n, p, w, ls = lmots_params[lmots_type]
         if len(buffer) != 4+(n*(p+1)):
             raise ValueError(err_bad_length, str(len(buffer)))
         C = buffer[4:n+4]
@@ -225,7 +276,7 @@ class LmotsSignature():
         lmots_type = buffer[0:4]
         if lmots_type not in lmots_params:
            raise ValueError(err_unknown_typecode, toHex(lmots_type))
-        n, p, w, ls = lmots_params[lmots_type]
+        alg, n, p, w, ls = lmots_params[lmots_type]
         rv = 4+(n*(p+1))
         if len(buffer) < rv:
             raise ValueError(err_bad_length, str(len(buffer)))
@@ -250,7 +301,7 @@ class LmotsPrivateKey:
         if lmots_type not in lmots_params:
             raise ValueError(err_unknown_typecode, toHex(lmots_type))
         self.type = lmots_type
-        n, p, w, ls = lmots_params[lmots_type]
+        alg, n, p, w, ls = lmots_params[lmots_type]
         if S is None:
             self.S = randBytes(LenS)
         else:
@@ -272,28 +323,28 @@ class LmotsPrivateKey:
         return not bool(self._signatures_remaining)
 
     def publicKey(self): 
-        n, p, w, ls = lmots_params[self.type]
-        hash = hashlib.sha256()
-        hash.update(self.S + D_PBLC)
+        alg, n, p, w, ls = lmots_params[self.type]
+        hash = H_start(alg)
+        H_update(hash, self.S + D_PBLC)
         for i in range(0, p):
-            tmp = H(self.S + u16(i+1) + D_PRG + self.SEED, n)
+            tmp = H(alg, self.S + u16(i+1) + D_PRG + self.SEED, n)
             for j in range(0, (2**w)-1):
-                tmp = H(self.S + u16(i) + u8(j) + tmp, n)
-            hash.update(tmp)
-        return LmotsPublicKey(self.S, hash.digest()[0:n], self.type)
+                tmp = H(alg, self.S + u16(i) + u8(j) + tmp, n)
+            H_update(hash, tmp)
+        return LmotsPublicKey(self.S, H_finish(hash, n), self.type)
 
     def sign(self, message):
         if self._signatures_remaining != 1:
             raise ValueError(err_private_key_exhausted)
-        n, p, w, ls = lmots_params[self.type]
+        alg, n, p, w, ls = lmots_params[self.type]
         C = randBytes(n)
-        hash1 = H(self.S + D_MESG + C + message, n)
+        hash1 = H(alg, self.S + D_MESG + C + message, n)
         V = hash1 + checksum(hash1, w, ls)
         y = []
         for i in range(0, p):
-            tmp = H(self.S + u16(i+1) + D_PRG + self.SEED, n)
+            tmp = H(alg, self.S + u16(i+1) + D_PRG + self.SEED, n)
             for j in range(0, coef(V, i, w)):
-                tmp = H(self.S + u16(i) + u8(j) + tmp, n)
+                tmp = H(alg, self.S + u16(i) + u8(j) + tmp, n)
             y.append(tmp)
         self._signatures_remaining = 0
         return LmotsSignature(C, y, self.type).serialize()
@@ -319,16 +370,16 @@ class LmotsPublicKey:
         signature = LmotsSignature.deserialize(sig)
         if (signature.type != self.type):
             raise ValueError(err_unknown_typecode)
-        n, p, w, ls = lmots_params[self.type]
-        hash1 = H(self.S + D_MESG + signature.C + message, n)
+        alg, n, p, w, ls = lmots_params[self.type]
+        hash1 = H(alg, self.S + D_MESG + signature.C + message, n)
         V = hash1 + checksum(hash1, w, ls)
-        hash = hashlib.sha256()
-        hash.update(self.S + D_PBLC)
+        hash = H_start(alg)
+        H_update(hash, self.S + D_PBLC)
         for i, tmp in enumerate(signature.y):
             for j in range(coef(V, i, w), (2**w)-1):
-                tmp = H(self.S + u16(i) + u8(j) + tmp, n)
-            hash.update(tmp)
-        return self.K == hash.digest()[0:n]
+                tmp = H(alg, self.S + u16(i) + u8(j) + tmp, n)
+            H_update(hash, tmp)
+        return self.K == H_finish(hash, n)
 
     def serialize(self):
         return self.type + self.S + self.K 
@@ -340,7 +391,7 @@ class LmotsPublicKey:
         lmots_type = buffer[0:4]
         if lmots_type not in lmots_params():
            raise ValueError(err_unknown_typecode, toHex(lmots_type))
-        n, p, w, ls = lmots_params[lmots_type]
+        alg, n, p, w, ls = lmots_params[lmots_type]
         if len(buffer) != 4+(2*n):
             raise ValueError(err_bad_length)
         S = buffer[4:4+n]
@@ -354,7 +405,7 @@ class LmotsPublicKey:
         lmots_type = buffer[0:4]
         if lmots_type not in lmots_params():
            raise ValueError(err_unknown_typecode, toHex(lmots_type))
-        n, p, w, ls = lmots_params[lmots_type]
+        alg, n, p, w, ls = lmots_params[lmots_type]
         rv = 4+(2*n)
         if len(buffer) < rv:
             raise ValueError(err_bad_length, str(len(buffer)))
@@ -381,7 +432,7 @@ class LmsSignature():
             raise ValueError(err_unknown_typecode, toHex(typecode))
         if lmots_sig[0:4] not in lmots_params:
             raise ValueError(err_unknown_typecode, toHex(lmots_sig[0:4]))
-        m, h = lms_params[typecode]
+        alg, m, h = lms_params[typecode]
         if len(path) != h:
             raise ValueError(err_bad_length, str(len(path)))
         self.lmots_sig = LmotsSignature.deserialize(lmots_sig)
@@ -402,7 +453,7 @@ class LmsSignature():
         lmots_type = buffer[4:8]
         if lmots_type not in lmots_params:
             raise ValueError(err_unknown_typecode, toHex(lmots_type))
-        n, p, w, ls = lmots_params[lmots_type]
+        alg, n, p, w, ls = lmots_params[lmots_type]
         lmots_sig_size = 4+(n*(p+1))
         if len(buffer) < 4+lmots_sig_size:
             raise ValueError(err_bad_length, str(len(buffer)))
@@ -411,7 +462,9 @@ class LmsSignature():
         lms_type = rest[0:4]
         if lms_type not in lms_params:
             raise ValueError(err_unknown_typecode, toHex(lms_type))
-        m, h = lms_params[lms_type]
+        alg2, m, h = lms_params[lms_type]
+        if (alg != alg2):
+            raise ValueError(err_algorithm_mismatch, alg + ' and ' + alg2)
         pos = 4
         if (q >= 2**h):
             raise ValueError(err_bad_value, str(q))
@@ -430,7 +483,7 @@ class LmsSignature():
         lmots_type = buffer[4:8]
         if lmots_type not in lmots_params:
             raise ValueError(err_unknown_typecode, toHex(lmots_type))
-        n, p, w, ls = lmots_params[lmots_type]
+        alg, n, p, w, ls = lmots_params[lmots_type]
         lmots_sig_size = 4+(n*(p+1))
         if len(buffer) < 4+lmots_sig_size:
             raise ValueError(err_bad_length, str(len(buffer)))
@@ -438,7 +491,9 @@ class LmsSignature():
         lms_type = buffer[4+lmots_sig_size:8+lmots_sig_size]
         if lms_type not in lms_params:
             raise ValueError(err_unknown_typecode, toHex(lms_type))
-        m, h = lms_params[lms_type]
+        alg2, m, h = lms_params[lms_type]
+        if (alg != alg2):
+            raise ValueError(err_algorithm_mismatch, alg + ' and ' + alg2)
         rv = 4+lmots_sig_size+4+(h*m)
         if len(buffer) < rv:
             raise ValueError(err_bad_length, str(len(buffer)))
@@ -467,8 +522,10 @@ class LmsPrivateKey(object):
             raise ValueError(err_unknown_typecode, toHex(lmots_type))
         if lms_type not in lms_params:
             raise ValueError(err_unknown_typecode, toHex(lms_type))
-        n, p, w, ls = lmots_params[lmots_type]
-        m, h = lms_params[lms_type]
+        alg, n, p, w, ls = lmots_params[lmots_type]
+        alg2, m, h = lms_params[lms_type]
+        if (alg != alg2):
+            raise ValueError(err_algorithm_mismatch, alg + ' and ' + alg2)
         self.lms_type = lms_type
         self.lmots_type = lmots_type
         if I is None:
@@ -498,12 +555,12 @@ class LmsPrivateKey(object):
     # Computes the root and other nodes
     #
     def _T(self, r):
-        m, h = lms_params[self.lms_type]
+        alg2, m, h = lms_params[self.lms_type]
         if (r >= 2**h):
-            self._nodes[r] = H(self.I + u32(r) + D_LEAF + \
+            self._nodes[r] = H(alg2, self.I + u32(r) + D_LEAF + \
                                self.ots_pub[r-(2**h)].K, m)
         else:
-            self._nodes[r] = H(self.I + u32(r) + D_INTR + \
+            self._nodes[r] = H(alg2, self.I + u32(r) + D_INTR + \
                                self._T(2*r) + self._T((2*r)+1), m)
         return self._nodes[r] 
 
@@ -519,8 +576,10 @@ class LmsPrivateKey(object):
             raise ValueError(err_unknown_typecode, toHex(lmots_type))
         if lms_type not in lms_params:
             raise ValueError(err_unknown_typecode, toHex(lms_type))
-        n, p, w, ls = lmots_params[lmots_type]
-        m, h = lms_params[lms_type]
+        alg, n, p, w, ls = lmots_params[lmots_type]
+        alg2, m, h = lms_params[lms_type]
+        if (alg != alg2):
+            raise ValueError(err_algorithm_mismatch, alg + ' and ' + alg2)
         SEED = buffer[8:8+n]
         I = buffer[8+n:8+n+LenI]
         q = int32(buffer[8+n+LenI:8+n+LenI+4])
@@ -537,7 +596,7 @@ class LmsPrivateKey(object):
         return p
         
     def sign(self, message):
-        m, h = lms_params[self.lms_type]
+        alg, m, h = lms_params[self.lms_type]
         if (self.q >= 2**h):
             raise ValueError(err_private_key_exhausted)
         ots_sig = self.ots_priv[self.q].sign(message)
@@ -550,14 +609,14 @@ class LmsPrivateKey(object):
         return LmsPublicKey(self.I, self.pub, self.lms_type, self.lmots_type)
 
     def remaining(self):
-        m, h = lms_params[self.lms_type]
+        alg2, m, h = lms_params[self.lms_type]
         return (2**h)-self.q
 
     def is_exhausted(self):
         return not bool(self.remaining())
 
     def maxSignatures(self):
-        m, h = lms_params[self.lms_type]
+        alg2, m, h = lms_params[self.lms_type]
         return 2**h
 
     def prettyPrint(self):
@@ -582,8 +641,10 @@ class LmsPublicKey(object):
         self.lmots_type = lmots_type
 
     def verify(self, message, sig):
-        m, h = lms_params[self.lms_type]
-        n, p, w, ls = lmots_params[self.lmots_type]
+        alg2, m, h = lms_params[self.lms_type]
+        alg, n, p, w, ls = lmots_params[self.lmots_type]
+        if (alg != alg2):
+            raise ValueError(err_algorithm_mismatch, alg + ' and ' + alg2)
         lms_sig = LmsSignature.deserialize(sig)
         if lms_sig.type != self.lms_type:
             return False
@@ -594,12 +655,12 @@ class LmsPublicKey(object):
         S = self.I + u32(lms_sig.q)
         Kc = lms_sig.lmots_sig.buildPublic(S, message)
         node_num = lms_sig.q + (2**h)
-        tmp = H(self.I + u32(node_num) + D_LEAF + Kc, m)
+        tmp = H(alg, self.I + u32(node_num) + D_LEAF + Kc, m)
         for pv in lms_sig.path:
             if (node_num % 2):
-                 tmp = H(self.I + u32(node_num//2) + D_INTR + pv + tmp, m)
+                 tmp = H(alg, self.I + u32(node_num//2) + D_INTR + pv + tmp, m)
             else:
-                 tmp = H(self.I + u32(node_num//2) + D_INTR + tmp + pv, m)
+                 tmp = H(alg, self.I + u32(node_num//2) + D_INTR + tmp + pv, m)
             node_num = node_num//2
         return bool(tmp == self.K)
 
@@ -613,7 +674,7 @@ class LmsPublicKey(object):
         lms_type = buffer[0:4]
         if lms_type not in lms_params:
             raise ValueError(err_unknown_typecode, toHex(lms_type))
-        m, h = lms_params[lms_type]
+        alg2, m, h = lms_params[lms_type]
         lmots_type = buffer[4:8]
         if lmots_type not in lmots_params:
             raise ValueError(err_unknown_typecode, toHex(lmots_type))
@@ -630,7 +691,7 @@ class LmsPublicKey(object):
         lms_type = buffer[0:4]
         if lms_type not in lms_params:
             raise ValueError(err_unknown_typecode, toHex(lms_type))
-        m, h = lms_params[lms_type]
+        alg2, m, h = lms_params[lms_type]
         lmots_type = buffer[4:8]
         if lmots_type not in lmots_params:
             raise ValueError(err_unknown_typecode, toHex(lmots_type))
@@ -749,8 +810,10 @@ class HssPrivateKey(object):
         self.levels = levels
         self.lms_type = lms_type
         self.lmots_type = lmots_type
-        m, h = lms_params[lms_type]
-        n, p, w, ls = lmots_params[lmots_type]
+        alg2, m, h = lms_params[lms_type]
+        alg, n, p, w, ls = lmots_params[lmots_type]
+        if (alg != alg2):
+            raise ValueError(err_algorithm_mismatch, alg + ' and ' + alg2)
         if SEED is None:
             self.SEED = randBytes(n)
         else:
@@ -806,7 +869,7 @@ class HssPrivateKey(object):
         return not bool(self._signatures_remaining)
 
     def maxSignatures(self):
-        m, h = lms_params[self.lms_type]
+        alg2, m, h = lms_params[self.lms_type]
         return 2**(levels*h)
 
     def serialize(self):

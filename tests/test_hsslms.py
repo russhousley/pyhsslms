@@ -3,7 +3,7 @@
 # Test routines for HSS/LMS Hash-based Signatures.
 #
 #
-# Copyright (c) 2020, Vigil Security, LLC
+# Copyright (c) 2020-2021, Vigil Security, LLC
 # All rights reserved.
 #
 # Redistribution and use, with or without modification, are permitted
@@ -37,16 +37,37 @@
 
 import os
 import unittest
-import pyhsslms
-from pyhsslms.compat import fromHex, toBytes
+from sys import version_info
+from pyhsslms import *
+from pyhsslms.compat import fromHex, toHex, toBytes, charNum, u8
 
 
 def mangle(buffer):
-    if buffer[30] == 65:
-        new_byte = 'B'
-    else:
-        new_byte = 'A'
-    return buffer[0:30] + toBytes(new_byte) + buffer[31:]
+    hex_byte = toHex(u8(charNum(buffer[30]) ^ 1))
+    return buffer[0:30] + fromHex(hex_byte) + buffer[31:]
+
+
+class TestHash(unittest.TestCase):
+
+    def testSHA256(self):
+        known = fromHex(
+         'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
+        hv = pyhsslms.H('sha256', fromHex('616263'), 32)
+        self.assertEqual(32, len(hv))
+        self.assertEqual(known, hv)
+        hv = pyhsslms.H('sha256', fromHex('616263'), 24)
+        self.assertEqual(24, len(hv))
+        self.assertEqual(known[0:24], hv)
+
+    def testSHAKE256(self):
+        known = fromHex(
+         'f7d02b4512be5ddcc25d148c71664dfd34e16abea26d6e7287f45e08ed6fcd87')
+        hv = pyhsslms.H('shake256', fromHex('21eda6'), 32)
+        self.assertEqual(32, len(hv))
+        self.assertEqual(known, hv)
+        hv = pyhsslms.H('shake256', fromHex('21eda6'), 24)
+        self.assertEqual(24, len(hv))
+        self.assertEqual(known[0:24], hv)
 
 
 class TestLMOTS(unittest.TestCase):

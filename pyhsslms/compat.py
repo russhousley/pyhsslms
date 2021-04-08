@@ -4,7 +4,7 @@
 # for HSS/LMS Hash-based Signatures as defined in RFC 8554.
 #
 #
-# Copyright (c) 2020, Vigil Security, LLC
+# Copyright (c) 2020-2021, Vigil Security, LLC
 # All rights reserved.
 #
 # Redistribution and use, with or without modification, are permitted
@@ -38,6 +38,24 @@
 
 from sys import version_info
 
+if version_info[0] <= 2 or (version_info[0] == 3 and version_info[1] < 6):
+    from Cryptodome.Hash import SHAKE256
+
+    class crypto_hash_shake256():
+        """
+        Put a wrapper around Crypto.Hash.SHAKE256 with an interface similar
+        to hashlib for use with older versions of Python.
+        """
+        def __init__(self):
+            self.name = 'shake_256'
+            self.handle = SHAKE256.new()
+
+        def update(self, buf):
+            self.handle.update(buf)
+
+        def digest(self, rvlen):
+            return self.handle.read(rvlen)
+
 
 if version_info[0] <= 2:
     import os
@@ -53,12 +71,11 @@ if version_info[0] <= 2:
     randBytes = os.urandom
     int32 = lambda x: struct.unpack('>L', x)[0]
     charNum = ord
+    shake256 = crypto_hash_shake256
     NoFileError = IOError
     FoundFileError = IOError
 
-else:
-    # secrets is not available until Python3.6.
-    # from secrets import token_bytes as random_bytes
+elif version_info[0] == 3 and version_info[1] < 6:
     import os
 
     u32 = lambda i: i.to_bytes(4, byteorder='big', signed=False)
@@ -67,9 +84,26 @@ else:
     fromHex = bytes.fromhex
     toHex = lambda x: x.hex()
     toBytes = lambda x: x.encode()
-    # randBytes = random_bytes
     randBytes = os.urandom
     int32 = lambda x: int.from_bytes(x, byteorder='big')
     charNum = lambda x: x
+    shake256 = crypto_hash_shake256
+    NoFileError = FileNotFoundError
+    FoundFileError = FileExistsError
+
+else:
+    import hashlib
+    from secrets import token_bytes as random_bytes
+
+    u32 = lambda i: i.to_bytes(4, byteorder='big', signed=False)
+    u16 = lambda i: i.to_bytes(2, byteorder='big', signed=False)
+    u8 = lambda i: i.to_bytes(1, byteorder='big', signed=False)
+    fromHex = bytes.fromhex
+    toHex = lambda x: x.hex()
+    toBytes = lambda x: x.encode()
+    randBytes = random_bytes
+    int32 = lambda x: int.from_bytes(x, byteorder='big')
+    charNum = lambda x: x
+    shake256 = hashlib.shake_256
     NoFileError = FileNotFoundError
     FoundFileError = FileExistsError
