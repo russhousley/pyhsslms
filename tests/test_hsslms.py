@@ -36,15 +36,15 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import tempfile
 import unittest
-from sys import version_info
 from pyhsslms import *
 from pyhsslms.compat import fromHex, toHex, toBytes, charNum, u8
 
 
-def mangle(buffer):
-    hex_byte = toHex(u8(charNum(buffer[30]) ^ 1))
-    return buffer[0:30] + fromHex(hex_byte) + buffer[31:]
+def mangle(buffer, offset=30):
+    hex_byte = toHex(u8(charNum(buffer[offset]) ^ 1))
+    return buffer[0:offset] + fromHex(hex_byte) + buffer[offset+1:]
 
 
 class TestHash(unittest.TestCase):
@@ -304,52 +304,52 @@ class TestHSS(unittest.TestCase):
 
 class TestHSSLMS(unittest.TestCase):
 
+    def setUp(self):
+        self.tempdir = tempfile.mkdtemp()
+        self.fname = os.path.join(self.tempdir, 'test1234.txt')
+        self.keyname = os.path.join(self.tempdir, 'testsigkey')
+
+    def tearDown(self):
+        if os.path.exists(self.tempdir):
+            for basedir, dirs, files in os.walk(self.tempdir):
+                for fn in files:
+                    pathname = os.path.join(basedir, fn)
+                    os.remove(pathname)
+            os.rmdir(self.tempdir)
+
     def testGenSignSignVerifyVerifyFailFail(self):
-        fname = 'test1234.txt'
-        keyname = 'testsigkey'
-        # make sure the files that will be created do not already exist
-        self.assertFalse(os.path.exists(fname))
-        self.assertFalse(os.path.exists(fname + '.sig'))
-        self.assertFalse(os.path.exists(keyname + '.prv'))
-        self.assertFalse(os.path.exists(keyname + '.pub'))
-        msg = toBytes('This is a test message to be signed.\n')
-        prv_key = pyhsslms.HssLmsPrivateKey.genkey(keyname, levels=2)
+        prv_key = pyhsslms.HssLmsPrivateKey.genkey(self.keyname, levels=2)
         self.assertTrue(prv_key)
-        self.assertTrue(os.path.exists(keyname + '.prv'))
-        self.assertTrue(os.path.exists(keyname + '.pub'))
-        with open(fname, 'wb') as f:
+        self.assertTrue(os.path.exists(self.keyname + '.prv'))
+        self.assertTrue(os.path.exists(self.keyname + '.pub'))
+        msg = toBytes('This is a test message to be signed.\n')
+        with open(self.fname, 'wb') as f:
             f.write(msg)
-        self.assertTrue(os.path.exists(fname))
-        self.assertTrue(prv_key.signFile(fname))
-        self.assertTrue(os.path.exists(fname + '.sig'))
+        self.assertTrue(os.path.exists(self.fname))
+        self.assertTrue(prv_key.signFile(self.fname))
+        self.assertTrue(os.path.exists(self.fname + '.sig'))
         sigbuf = prv_key.sign(msg)
         self.assertTrue(len(sigbuf))
-        pub_key = pyhsslms.HssLmsPublicKey(keyname)
+        pub_key = pyhsslms.HssLmsPublicKey(self.keyname)
         self.assertTrue(pub_key)
-        self.assertTrue(pub_key.verifyFile(fname))
+        self.assertTrue(pub_key.verifyFile(self.fname))
+        self.assertTrue(pub_key.verifyFile(self.fname + '.sig'))
         self.assertTrue(pub_key.verify(msg, sigbuf))
         self.assertFalse(pub_key.verify(msg, mangle(sigbuf)))
         self.assertFalse(pub_key.verify(mangle(msg), sigbuf))
-        os.remove(fname)
-        os.remove(fname + '.sig')
-        os.remove(keyname + '.prv')
-        os.remove(keyname + '.pub')
 
     def testFromPublicKeyGetI(self):
-        keyname = 'testpubkey'
-        # make sure the file that will be created does not already exist
-        self.assertFalse(os.path.exists(keyname + '.pub'))
         buffer = fromHex('000000010000000500000004' + \
                          '616d2133c3275326e591f26c748e3588' + \
                          '9ab949c09b231bc43a2748486ba78492' + \
                          '190208cf5a3d8491e774d8301dc8510a')
         expected = fromHex('616d2133c3275326e591f26c748e3588')
-        with open(keyname + '.pub', 'wb') as pub_file:
+        with open(self.keyname + '.pub', 'wb') as pub_file:
             pub_file.write(buffer)
-        pub_key = pyhsslms.HssLmsPublicKey(keyname)
+        pub_key = pyhsslms.HssLmsPublicKey(self.keyname)
         I = pub_key.I()
         self.assertEqual(expected, I)
-        os.remove(keyname + '.pub')
+
 
 class TestInterop(unittest.TestCase):
 
@@ -976,7 +976,7 @@ class TestInterop(unittest.TestCase):
         self.assertFalse(pub.verify(msg, mangle(sigbuffer)))
         self.assertFalse(pub.verify(msg[1:], sigbuffer))
 
-    def testVerifyRFCExample(self):
+    def testVerifyRFC8554Example(self):
         msg = fromHex('54686520706f77657273206e6f742064656c656761' + \
          '74656420746f2074686520556e69746564205374617465732062792074686520' + \
          '436f6e737469747574696f6e2c206e6f722070726f6869626974656420627920' + \
@@ -1077,3 +1077,204 @@ class TestInterop(unittest.TestCase):
         self.assertTrue(pub.verify(msg, sigbuffer))
         self.assertFalse(pub.verify(msg, mangle(sigbuffer)))
         self.assertFalse(pub.verify(mangle(msg), sigbuffer))
+
+class TestNewParamSets2021(unittest.TestCase):
+
+    def testVerifySHA256192(self):
+        msg = fromHex('54657374206d657361676520666f72205348413235362f3139320a')
+        pubbuffer = fromHex('000000010000000a00000008' + \
+         '202122232425262728292a2b2c2d2e2f2c571450aed99cfb' + \
+         '4f4ac285da14882796618314508b12d2')
+        sigbuffer = fromHex('000000000000000500000008' + \
+         '0b5040a18c1b5cabcbc85b047402ec6294a30dd8da8fc3da' + \
+         'dcc7fa8c8d2d2a8cb41b4fb080443d82302d75edf5e1ab2a' + \
+         '6dfc604ac2510910dd8e289eb0b43986f44f72156c6f5829' + \
+         '25a6220a0b38dc3e518afe5b1b9b2525e25364c02cea0298' + \
+         '1a1136b7c7263f5c64babe117bf808e45299716d291b9cd7' + \
+         '134667b731876d2b36170f4b4bf1dae8d68d46da97b4e68b' + \
+         'd17d25948a09526225e1a40a55212facd8e9ddbef3efe9a0' + \
+         '13f4edcb07e401ba4fd42625b573e2b15515769e6fc3511d' + \
+         'ffbc1e12acfb9bf0c2fac322bbfaf29246254cfd4d497213' + \
+         '1e9ad5bc6fac2e2f3c3dbd92a46c6187725f518b744cb9c6' + \
+         'cfea0868d59cf329d0633ba5b5ae3202f12cedf224a656c1' + \
+         'b8d9ec380b05f629ae878e6265de29bc171f2b0128b1da0c' + \
+         '29ba727d4ec2e2fade202fc84737a9d8d97f52fb70dde6e2' + \
+         '6eaccbfb4d5f2faacd4066aa93818533587e2eccedb42e41' + \
+         'c9bfa602e3e973fe08c8ee35713d8580b10102170f207ca7' + \
+         'e937f14d3ae25f6f99c307bb66d2b0da88ed13130bf2b89f' + \
+         '696ed00415b5437628f76d11040b061f837c4b42900aff2f' + \
+         '06d19d6870145e9b1a746673de15a02c74744f42db18c194' + \
+         '9dccadd828483b74251d571ddec7158559036c5cf6709df4' + \
+         '420641e1a7793544e48cab9818fb615689ae83b32468093b' + \
+         'f1247ed1da9ee87da408fffa366b4f2c6b55b5787ed14e8f' + \
+         'e9c9626aedebd1c3f8d6a2c5a9e514f7cbf2385bbc703af3' + \
+         'ecae4ad57b9de6cc58df826552bdd9d86bda1e3d845786fd' + \
+         'e7bb777d2cf0fedf0c31e7aee973fe1895ff74244193761b' + \
+         'd41802eece0e8d583ab0ae1729913a1ad5c4837a564075ca' + \
+         'd562dc2abcc212ab163bd29a2c13dae82f5e966f29963eb2' + \
+         'b85121440c1a6993ee2396eff407e50e11a98fb723b1fda7' + \
+         '0000000a' + \
+         'e9ca10eaa811b22ae07fb195e3590a334ea64209942fbae3' + \
+         '38d19f152182c807d3c40b189d3fcbea942f44682439b191' + \
+         '332d33ae0b761a2a8f984b56b2ac2fd4ab08223a69ed1f77' + \
+         '19c7aa7e9eee96504b0e60c6bb5c942d695f0493eb25f80a' + \
+         '5871cffd131d0e04ffe5065bc7875e82d34b40b69dd9f3c1')
+        pub = pyhsslms.HssPublicKey.deserialize(pubbuffer)
+        self.assertTrue(pub.prettyPrint())
+        sig = pyhsslms.HssSignature.deserialize(sigbuffer)
+        self.assertTrue(sig.prettyPrint())
+        self.assertTrue(pub.verify(msg, sigbuffer))
+        self.assertFalse(pub.verify(msg, mangle(sigbuffer)))
+        self.assertFalse(pub.verify(mangle(msg, offset=10), sigbuffer))
+
+    def testSmallRandomPrivateKeySHA256192(self):
+        msg = toBytes('The way to get started is to quit talking and ' + \
+                      'begin doing.')
+        prv = pyhsslms.HssPrivateKey(levels=1,
+                  lms_type=lms_sha256_m24_h5,
+                  lmots_type=lmots_sha256_n24_w8)
+        sigbuffer = prv.sign(msg)
+        sig = pyhsslms.HssSignature.deserialize(sigbuffer)
+        pub = prv.publicKey()
+        self.assertTrue(pub.verify(msg, sigbuffer))
+        self.assertFalse(pub.verify(msg, mangle(sigbuffer)))
+        self.assertFalse(pub.verify(mangle(msg), sigbuffer))
+        self.assertTrue(sig.prettyPrint())
+        self.assertTrue(prv.prettyPrint())
+        self.assertTrue(pub.prettyPrint())
+
+    def testVerifySHAKE256192(self):
+        msg = fromHex(
+         '54657374206d65737361676520666f72205348414b453235362d3139320a')
+        pubbuffer = fromHex('000000010000001400000010' + \
+         '505152535455565758595a5b5c5d5e5fdb54a4509901051c' +\
+         '01e26d9990e550347986da87924ff0b1')
+        sigbuffer = fromHex('000000000000000600000010' + \
+         '84219da9ce9fffb16edb94527c6d10565587db28062deac4' + \
+         '208e62fc4fbe9d85deb3c6bd2c01640accb387d8a6093d68' + \
+         '511234a6a1a50108091c034cb1777e02b5df466149a66969' + \
+         'a498e4200c0a0c1bf5d100cdb97d2dd40efd3cada278acc5' + \
+         'a570071a043956112c6deebd1eb3a7b56f5f6791515a7b5f' + \
+         'fddb0ec2d9094bfbc889ea15c3c7b9bea953efb75ed648f5' + \
+         '35b9acab66a2e9631e426e4e99b733caa6c55963929b77fe' + \
+         'c54a7e703d8162e736875cb6a455d4a9015c7a6d8fd5fe75' + \
+         'e402b47036dc3770f4a1dd0a559cb478c7fb1726005321be' + \
+         '9d1ac2de94d731ee4ca79cff454c811f46d11980909f047b' + \
+         '2005e84b6e15378446b1ca691efe491ea98acc9d3c0f785c' + \
+         'aba5e2eb3c306811c240ba22802923827d582639304a1e97' + \
+         '83ba5bc9d69d999a7db8f749770c3c04a152856dc726d806' + \
+         '7921465b61b3f847b13b2635a45379e5adc6ff58a99b00e6' + \
+         '0ac767f7f30175f9f7a140257e218be307954b1250c9b419' + \
+         '02c4fa7c90d8a592945c66e86a76defcb84500b55598a199' + \
+         '0faaa10077c74c94895731585c8f900de1a1c675bd8b0c18' + \
+         '0ebe2b5eb3ef8019ece3e1ea7223eb7906a2042b6262b4aa' + \
+         '25c4b8a05f205c8befeef11ceff1282508d71bc2a8cfa0a9' + \
+         '9f73f3e3a74bb4b3c0d8ca2abd0e1c2c17dafe18b4ee2298' + \
+         'e87bcfb1305b3c069e6d385569a4067ed547486dd1a50d6f' + \
+         '4a58aab96e2fa883a9a39e1bd45541eee94efc32faa9a94b' + \
+         'e66dc8538b2dab05aee5efa6b3b2efb3fd020fe789477a93' + \
+         'afff9a3e636dbba864a5bffa3e28d13d49bb597d94865bde' + \
+         '88c4627f206ab2b465084d6b780666e952f8710efd748bd0' + \
+         'f1ae8f1035087f5028f14affcc5fffe332121ae4f87ac5f1' + \
+         'eac9062608c7d87708f1723f38b23237a4edf4b49a5cd3d7' + \
+         '00000014' + \
+         'dd4bdc8f928fb526f6fb7cdb944a7ebaa7fb05d995b5721a' + \
+         '27096a5007d82f79d063acd434a04e97f61552f7f81a9317' + \
+         'b4ec7c87a5ed10c881928fc6ebce6dfce9daae9cc9dba690' + \
+         '7ca9a9dd5f9f573704d5e6cf22a43b04e64c1ffc7e1c442e' + \
+         'cb495ba265f465c56291a902e62a461f6dfda232457fad14')
+        pub = pyhsslms.HssPublicKey.deserialize(pubbuffer)
+        self.assertTrue(pub.prettyPrint())
+        sig = pyhsslms.HssSignature.deserialize(sigbuffer)
+        self.assertTrue(sig.prettyPrint())
+        self.assertTrue(pub.verify(msg, sigbuffer))
+        self.assertFalse(pub.verify(msg, mangle(sigbuffer)))
+        self.assertFalse(pub.verify(mangle(msg, offset=10), sigbuffer))
+
+    def testSmallRandomPrivateKeySHAKE256256(self):
+        msg = toBytes('The way to get started is to quit talking and ' + \
+                      'begin doing.')
+        prv = pyhsslms.HssPrivateKey(levels=1,
+                  lms_type=lms_shake_m24_h5,
+                  lmots_type=lmots_shake_n24_w8)
+        sigbuffer = prv.sign(msg)
+        sig = pyhsslms.HssSignature.deserialize(sigbuffer)
+        pub = prv.publicKey()
+        self.assertTrue(pub.verify(msg, sigbuffer))
+        self.assertFalse(pub.verify(msg, mangle(sigbuffer)))
+        self.assertFalse(pub.verify(mangle(msg), sigbuffer))
+        self.assertTrue(sig.prettyPrint())
+        self.assertTrue(prv.prettyPrint())
+        self.assertTrue(pub.prettyPrint())
+
+    def testVerifySHAKE256256(self):
+        msg = fromHex(
+         '54657374206d657361676520666f72205348414b453235362d3235360a')
+        pubbuffer = fromHex('000000010000000f0000000c' + \
+         '808182838485868788898a8b8c8d8e8f9bb7faee411cae806c16a466c3191a8b' +\
+         '65d0ac31932bbf0c2d07c7a4a36379fe')
+        sigbuffer = fromHex('00000000000000070000000c' + \
+         'b82709f0f00e83759190996233d1ee4f4ec50534473c02ffa145e8ca2874e32b' + \
+         '16b228118c62b96c9c77678b33183730debaade8fe607f05c6697bc971519a34' + \
+         '1d69c00129680b67e75b3bd7d8aa5c8b71f02669d177a2a0eea896dcd1660f16' + \
+         '864b302ff321f9c4b8354408d06760504f768ebd4e545a9b0ac058c575078e6c' + \
+         '1403160fb45450d61a9c8c81f6bd69bdfa26a16e12a265baf79e9e233eb71af6' + \
+         '34ecc66dc88e10c6e0142942d4843f70a0242727bc5a2aabf7b0ec12a99090d8' + \
+         'caeef21303f8ac58b9f200371dc9e41ab956e1a3efed9d4bbb38975b46c28d5f' + \
+         '5b3ed19d847bd0a737177263cbc1a2262d40e80815ee149b6cce2714384c9b7f' + \
+         'ceb3bbcbd25228dda8306536376f8793ecadd6020265dab9075f64c773ef97d0' + \
+         '7352919995b74404cc69a6f3b469445c9286a6b2c9f6dc839be76618f053de76' + \
+         '3da3571ef70f805c9cc54b8e501a98b98c70785eeb61737eced78b0e380ded4f' + \
+         '769a9d422786def59700eef3278017babbe5f9063b468ae0dd61d94f9f99d5cc' + \
+         '36fbec4178d2bda3ad31e1644a2bcce208d72d50a7637851aa908b94dc437612' + \
+         '0d5beab0fb805e1945c41834dd6085e6db1a3aa78fcb59f62bde68236a10618c' + \
+         'ff123abe64dae8dabb2e84ca705309c2ab986d4f8326ba0642272cb3904eb96f' + \
+         '6f5e3bb8813997881b6a33cac0714e4b5e7a882ad87e141931f97d612b84e903' + \
+         'e773139ae377f5ba19ac86198d485fca97742568f6ff758120a89bf19059b8a6' + \
+         'bfe2d86b12778164436ab2659ba866767fcc435584125fb7924201ee67b535da' + \
+         'f72c5cb31f5a0b1d926324c26e67d4c3836e301aa09bae8fb3f91f1622b1818c' + \
+         'cf440f52ca9b5b9b99aba8a6754aae2b967c4954fa85298ad9b1e74f27a46127' + \
+         'c36131c8991f0cc2ba57a15d35c91cf8bc48e8e20d625af4e85d8f9402ec44af' + \
+         'bd4792b924b839332a64788a7701a30094b9ec4b9f4b648f168bf457fbb3c959' + \
+         '4fa87920b645e42aa2fecc9e21e000ca7d3ff914e15c40a8bc533129a7fd3952' + \
+         '9376430f355aaf96a0a13d13f2419141b3cc25843e8c90d0e551a355dd90ad77' + \
+         '0ea7255214ce11238605de2f000d200104d0c3a3e35ae64ea10a3eff37ac7e95' + \
+         '49217cdf52f307172e2f6c7a2a4543e14314036525b1ad53eeaddf0e24b1f369' + \
+         '14ed22483f2889f61e62b6fb78f5645bdbb02c9e5bf97db7a0004e87c2a55399' + \
+         'b61958786c97bd52fa199c27f6bb4d68c4907933562755bfec5d4fb52f06c289' + \
+         'd6e852cf6bc773ffd4c07ee2d6cc55f57edcfbc8e8692a49ad47a121fe3c1b16' + \
+         'cab1cc285faf6793ffad7a8c341a49c5d2dce7069e464cb90a00b2903648b23c' + \
+         '81a68e21d748a7e7b1df8a593f3894b2477e8316947ca725d141135202a9442e' + \
+         '1db33bbd390d2c04401c39b253b78ce297b0e14755e46ec08a146d279c67af70' + \
+         'de256890804d83d6ec5ca3286f1fca9c72abf6ef868e7f6eb0fddda1b040ecec' + \
+         '9bbc69e2fd8618e9db3bdb0af13dda06c6617e95afa522d6a2552de15324d991' + \
+         '19f55e9af11ae3d5614b564c642dbfec6c644198ce80d2433ac8ee738f9d825e' + \
+         '0000000f' + \
+         '71d585a35c3a908379f4072d070311db5d65b242b714bc5a756ba5e228abfa0d' + \
+         '1329978a05d5e815cf4d74c1e547ec4aa3ca956ae927df8b29fb9fab3917a7a4' + \
+         'ae61ba57e5342e9db12caf6f6dbc5253de5268d4b0c4ce4ebe6852f012b162fc' + \
+         '1c12b9ffc3bcb1d3ac8589777655e22cd9b99ff1e4346fd0efeaa1da044692e7' + \
+         'ad6bfc337db69849e54411df8920c228a2b7762c11e4b1c49efb74486d3931ea')
+        pub = pyhsslms.HssPublicKey.deserialize(pubbuffer)
+        self.assertTrue(pub.prettyPrint())
+        sig = pyhsslms.HssSignature.deserialize(sigbuffer)
+        self.assertTrue(sig.prettyPrint())
+        self.assertTrue(pub.verify(msg, sigbuffer))
+        self.assertFalse(pub.verify(msg, mangle(sigbuffer)))
+        self.assertFalse(pub.verify(mangle(msg, offset=10), sigbuffer))
+
+    def testSmallRandomPrivateKeySHAKE256256(self):
+        msg = toBytes('The way to get started is to quit talking and ' + \
+                      'begin doing.')
+        prv = pyhsslms.HssPrivateKey(levels=1,
+                  lms_type=lms_shake_m32_h5,
+                  lmots_type=lmots_shake_n32_w8)
+        sigbuffer = prv.sign(msg)
+        sig = pyhsslms.HssSignature.deserialize(sigbuffer)
+        pub = prv.publicKey()
+        self.assertTrue(pub.verify(msg, sigbuffer))
+        self.assertFalse(pub.verify(msg, mangle(sigbuffer)))
+        self.assertFalse(pub.verify(mangle(msg), sigbuffer))
+        self.assertTrue(sig.prettyPrint())
+        self.assertTrue(prv.prettyPrint())
+        self.assertTrue(pub.prettyPrint())

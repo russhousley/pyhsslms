@@ -61,13 +61,37 @@ lmots_sha256_n32_w1 = fromHex('00000001')
 lmots_sha256_n32_w2 = fromHex('00000002')
 lmots_sha256_n32_w4 = fromHex('00000003')
 lmots_sha256_n32_w8 = fromHex('00000004')
+lmots_sha256_n24_w1 = fromHex('00000005')
+lmots_sha256_n24_w2 = fromHex('00000006')
+lmots_sha256_n24_w4 = fromHex('00000007')
+lmots_sha256_n24_w8 = fromHex('00000008')
+lmots_shake_n32_w1  = fromHex('00000009')
+lmots_shake_n32_w2  = fromHex('0000000A')
+lmots_shake_n32_w4  = fromHex('0000000B')
+lmots_shake_n32_w8  = fromHex('0000000C')
+lmots_shake_n24_w1  = fromHex('0000000D')
+lmots_shake_n24_w2  = fromHex('0000000E')
+lmots_shake_n24_w4  = fromHex('0000000F')
+lmots_shake_n24_w8  = fromHex('00000010')
 
 lmots_params = {
-    #                     alg       n   p    w  ls
-    lmots_sha256_n32_w1: ('sha256', 32, 265, 1, 7), 
-    lmots_sha256_n32_w2: ('sha256', 32, 133, 2, 6), 
-    lmots_sha256_n32_w4: ('sha256', 32, 67,  4, 4), 
-    lmots_sha256_n32_w8: ('sha256', 32, 34,  8, 0) }
+    #                     alg         n   p    w  ls
+    lmots_sha256_n32_w1: ('sha256',   32, 265, 1, 7), 
+    lmots_sha256_n32_w2: ('sha256',   32, 133, 2, 6), 
+    lmots_sha256_n32_w4: ('sha256',   32,  67, 4, 4), 
+    lmots_sha256_n32_w8: ('sha256',   32,  34, 8, 0),
+    lmots_sha256_n24_w1: ('sha256',   24, 200, 1, 8),
+    lmots_sha256_n24_w2: ('sha256',   24, 101, 2, 6),
+    lmots_sha256_n24_w4: ('sha256',   24,  51, 4, 4),
+    lmots_sha256_n24_w8: ('sha256',   24,  26, 8, 0),
+    lmots_shake_n32_w1:  ('shake256', 32, 265, 1, 7), 
+    lmots_shake_n32_w2:  ('shake256', 32, 133, 2, 6),
+    lmots_shake_n32_w4:  ('shake256', 32,  67, 4, 4),
+    lmots_shake_n32_w8:  ('shake256', 32,  34, 8, 0),
+    lmots_shake_n24_w1:  ('shake256', 24, 200, 1, 8),
+    lmots_shake_n24_w2:  ('shake256', 24, 101, 2, 6),
+    lmots_shake_n24_w4:  ('shake256', 24,  51, 4, 4),
+    lmots_shake_n24_w8:  ('shake256', 24,  26, 8, 0) }
 
 
 # LMS typecodes and parameters
@@ -77,14 +101,44 @@ lms_sha256_m32_h10 = fromHex('00000006')
 lms_sha256_m32_h15 = fromHex('00000007')
 lms_sha256_m32_h20 = fromHex('00000008')
 lms_sha256_m32_h25 = fromHex('00000009')
+lms_sha256_m24_h5  = fromHex('0000000A')
+lms_sha256_m24_h10 = fromHex('0000000B')
+lms_sha256_m24_h15 = fromHex('0000000C')
+lms_sha256_m24_h20 = fromHex('0000000D')
+lms_sha256_m24_h25 = fromHex('0000000E')
+lms_shake_m32_h5   = fromHex('0000000F')
+lms_shake_m32_h10  = fromHex('00000010')
+lms_shake_m32_h15  = fromHex('00000011')
+lms_shake_m32_h20  = fromHex('00000012')
+lms_shake_m32_h25  = fromHex('00000013')
+lms_shake_m24_h5   = fromHex('00000014')
+lms_shake_m24_h10  = fromHex('00000015')
+lms_shake_m24_h15  = fromHex('00000016')
+lms_shake_m24_h20  = fromHex('00000017')
+lms_shake_m24_h25  = fromHex('00000018')
 
 lms_params = {
-    #                    alg       m   h 
-    lms_sha256_m32_h5:  ('sha256', 32, 5), 
-    lms_sha256_m32_h10: ('sha256', 32, 10), 
-    lms_sha256_m32_h15: ('sha256', 32, 15), 
-    lms_sha256_m32_h20: ('sha256', 32, 20),
-    lms_sha256_m32_h25: ('sha256', 32, 25) }
+    #                    alg         m    h 
+    lms_sha256_m32_h5:  ('sha256',   32,  5), 
+    lms_sha256_m32_h10: ('sha256',   32, 10), 
+    lms_sha256_m32_h15: ('sha256',   32, 15), 
+    lms_sha256_m32_h20: ('sha256',   32, 20),
+    lms_sha256_m32_h25: ('sha256',   32, 25),
+    lms_sha256_m24_h5:  ('sha256',   24,  5),
+    lms_sha256_m24_h10: ('sha256',   24, 10),
+    lms_sha256_m24_h15: ('sha256',   24, 15),
+    lms_sha256_m24_h20: ('sha256',   24, 20),
+    lms_sha256_m24_h25: ('sha256',   24, 25),
+    lms_shake_m32_h5:   ('shake256', 32,  5), 
+    lms_shake_m32_h10:  ('shake256', 32, 10), 
+    lms_shake_m32_h15:  ('shake256', 32, 15), 
+    lms_shake_m32_h20:  ('shake256', 32, 20),
+    lms_shake_m32_h25:  ('shake256', 32, 25),
+    lms_shake_m24_h5:   ('shake256', 24,  5),
+    lms_shake_m24_h10:  ('shake256', 24, 10),
+    lms_shake_m24_h15:  ('shake256', 24, 15),
+    lms_shake_m24_h20:  ('shake256', 24, 20),
+    lms_shake_m24_h25:  ('shake256', 24, 25) }
 
 
 # Size-related constants
@@ -287,7 +341,7 @@ class LmotsSignature():
         rv += ("   LMOTS type: %s\n" % toHex(self.type))
         rv += ("   C         : %s\n" % toHex(self.C))
         for i, e in enumerate(self.y):
-            rv += ("   y[%02d]     : %s\n" % (i, toHex(e), ))
+            rv += ("   y[%03d]    : %s\n" % (i, toHex(e), ))
         return rv
 
 
@@ -505,7 +559,7 @@ class LmsSignature():
         rv += ("   LMOTS type: %s\n" % toHex(self.lmots_sig.type))
         rv += ("   C         : %s\n" % toHex(self.lmots_sig.C))
         for i, e in enumerate(self.lmots_sig.y):
-            rv += ("   y[%02d]     : %s\n" % (i, toHex(e), ))
+            rv += ("   y[%03d]    : %s\n" % (i, toHex(e), ))
         rv += ("   LMS type  : %s\n" % toHex(self.type))
         for i, e in enumerate(self.path):
             rv += ("   path[%02d]  : %s\n" % (i, toHex(e), ))
@@ -773,7 +827,7 @@ class HssSignature():
             rv += ("   LMOTS type: %s\n" % toHex(self.sig[j].lmots_sig.type))
             rv += ("   C         : %s\n" % toHex(self.sig[j].lmots_sig.C))
             for i, e in enumerate(self.sig[j].lmots_sig.y):
-                rv += ("   y[%02d]     : %s\n" % (i, toHex(e), ))
+                rv += ("   y[%03d]    : %s\n" % (i, toHex(e), ))
             rv += ("   LMS type  : %s\n" % toHex(self.sig[j].type))
             for i, e in enumerate(self.sig[j].path):
                 rv += ("   path[%02d]  : %s\n" % (i, toHex(e), ))
@@ -787,7 +841,7 @@ class HssSignature():
         rv += ("   LMOTS type: %s\n" % toHex(self.lms_sig.lmots_sig.type))
         rv += ("   C         : %s\n" % toHex(self.lms_sig.lmots_sig.C))
         for i, e in enumerate(self.lms_sig.lmots_sig.y):
-            rv += ("   y[%02d]     : %s\n" % (i, toHex(e), ))
+            rv += ("   y[%03d]    : %s\n" % (i, toHex(e), ))
         rv += ("   LMS type  : %s\n" % toHex(self.lms_sig.type))
         for i, e in enumerate(self.lms_sig.path):
             rv += ("   path[%02d]  : %s\n" % (i, toHex(e), ))
@@ -967,7 +1021,10 @@ class HssLmsSignature():
         FileNotFoundError or IOError
             If filename.sig does not exist.
         """
-        sig_filename = os.path.abspath(filename + '.sig')
+        if filename.endswith('.sig'):
+            sig_filename = os.path.abspath(filename)
+        else:
+            sig_filename = os.path.abspath(filename + '.sig')
         if not os.path.exists(sig_filename):
             raise NoFileError
         try:
@@ -1046,12 +1103,39 @@ class HssLmsPrivateKey():
                 pyhsslms.lms_sha256_m32_h15
                 pyhsslms.lms_sha256_m32_h20
                 pyhsslms.lms_sha256_m32_h25
+                pyhsslms.lms_sha256_m24_h5
+                pyhsslms.lms_sha256_m24_h10
+                pyhsslms.lms_sha256_m24_h15
+                pyhsslms.lms_sha256_m24_h20
+                pyhsslms.lms_sha256_m24_h25
+                pyhsslms.lms_shake_m32_h5
+                pyhsslms.lms_shake_m32_h10
+                pyhsslms.lms_shake_m32_h15
+                pyhsslms.lms_shake_m32_h20
+                pyhsslms.lms_shake_m32_h25
+                pyhsslms.lms_shake_m24_h5
+                pyhsslms.lms_shake_m24_h10
+                pyhsslms.lms_shake_m24_h15
+                pyhsslms.lms_shake_m24_h20
+from .pyhsslms import lms_shake_m24_h25
         lmots_type: :class:`bytes`
             The type for LM-OTS parameters.  Choices:
                 pyhsslms.lmots_sha256_n32_w1
                 pyhsslms.lmots_sha256_n32_w2
                 pyhsslms.lmots_sha256_n32_w4
                 pyhsslms.lmots_sha256_n32_w8
+                pyhsslms.lmots_sha256_n24_w1
+                pyhsslms.lmots_sha256_n24_w2
+                pyhsslms.lmots_sha256_n24_w4
+                pyhsslms.lmots_sha256_n24_w8
+                pyhsslms.lmots_shake_n32_w1
+                pyhsslms.lmots_shake_n32_w2
+                pyhsslms.lmots_shake_n32_w4
+                pyhsslms.lmots_shake_n32_w8
+                pyhsslms.lmots_shake_n24_w1
+                pyhsslms.lmots_shake_n24_w2
+                pyhsslms.lmots_shake_n24_w4
+                pyhsslms.lmots_shake_n24_w8
 
         Returns
         -------
@@ -1191,7 +1275,10 @@ class HssLmsPublicKey():
         FileNotFoundError or IOError
             If keyname.pub does not exist.
         """
-        pub_filename = os.path.abspath(keyname + '.pub')
+        if keyname.endswith('.pub'):
+            pub_filename = os.path.abspath(keyname)
+        else:
+            pub_filename = os.path.abspath(keyname + '.pub')
         if not os.path.exists(pub_filename):
             raise NoFileError
         try:
@@ -1232,10 +1319,14 @@ class HssLmsPublicKey():
         FileNotFoundError or IOError
             If the file to be signed is not found.
         """
-        pathname = os.path.abspath(filename)
+        if filename.endswith('.sig'):
+            sig_pathname = os.path.abspath(filename)
+            pathname = os.path.splitext(sig_pathname)[0]
+        else:
+            sig_pathname = os.path.abspath(filename + '.sig')
+            pathname = os.path.abspath(filename)
         if not os.path.exists(pathname):
             raise NoFileError
-        sig_pathname = os.path.abspath(filename + '.sig')
         if not os.path.exists(sig_pathname):
             raise NoFileError
         try:

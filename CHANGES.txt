@@ -23,3 +23,16 @@ Revision 1.0.2, released 8-Apr-2021
 - Clean up the random number generation:
   -- Use os.urandom before Python3.6.
   -- Use secrets.token_bytes for Python3.6 and later.
+
+
+Revision 1.1.0, released 3-Jun-2021
+------------------------------------
+
+- Add parameter sets that use SHA-256/192 and SHAKE256 from
+  draft-fluhrer-lms-more-parm-sets-05, which includes the
+  IANA-assigned identifiers.
+
+- Refactor unit tests that use files to ensure that files are deleted,
+  even when the test fail.
+
+- Fix bug in HssLmsPublicKey.verifyFile().
