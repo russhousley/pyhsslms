@@ -257,3 +257,7 @@ def main():
         sig = pyhsslms.HssLmsSignature(filename)
         print("Signature: " + filename + ".sig")
         print(sig.hss_sig.prettyPrint())
+
+if __name__ == "__main__":
+    main()
+    
