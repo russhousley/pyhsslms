@@ -681,6 +681,7 @@ class LmsPrivateKey(object):
         rv += ("   SEED      : %s\n" % toHex(self.SEED))
         rv += ("   q         : %s\n" % toHex(u32(self.q)))
         rv += ("   pub       : %s\n" % toHex(self.pub))
+        rv += ("   max signs : %d\n" % self.maxSignatures())
         return rv
 
 
@@ -754,12 +755,17 @@ class LmsPublicKey(object):
             raise ValueError(err_bad_length, str(len(buffer)))
         return rv
 
+    def maxSignatures(self):
+        alg2, m, h = lms_params[self.lms_type]
+        return 2**h
+    
     def prettyPrint(self):
         rv = "LMS public key\n"
         rv += ("   LMS type  : %s\n" % toHex(self.lms_type))
         rv += ("   LMOTS type: %s\n" % toHex(self.lmots_type))
         rv += ("   I         : %s\n" % toHex(self.I))
         rv += ("   K         : %s\n" % toHex(self.K))
+        rv += ("   max signs : %d\n" % self.maxSignatures())
         return rv
 
 
@@ -924,7 +930,7 @@ class HssPrivateKey(object):
 
     def maxSignatures(self):
         alg2, m, h = lms_params[self.lms_type]
-        return 2**(levels*h)
+        return 2**(self.levels*h)
 
     def serialize(self):
         return u32(self.levels) + u32(self._signatures_remaining) + \
@@ -951,6 +957,7 @@ class HssPrivateKey(object):
             rv += ("   SEED      : %s\n" % toHex(prv.SEED))
             rv += ("   q         : %s\n" % toHex(u32(prv.q)))
             rv += ("   pub       : %s\n" % toHex(prv.pub))
+        rv += ("   max signs : %d\n" % self.maxSignatures())
         return rv
 
 class HssPublicKey(object):
@@ -985,6 +992,10 @@ class HssPublicKey(object):
         levels = int32(buffer[0:4])
         rootpub = LmsPublicKey.deserialize(buffer[4:])
         return cls(rootpub, levels)
+        
+    def maxSignatures(self):
+        alg2, m, h = lms_params[self.pub.lms_type]
+        return 2**(self.levels*h)
 
     def prettyPrint(self):
         rv = "HSS public key\n"
@@ -993,6 +1004,7 @@ class HssPublicKey(object):
         rv += ("   LMOTS type: %s\n" % toHex(self.pub.lmots_type))
         rv += ("   I         : %s\n" % toHex(self.pub.I))
         rv += ("   K         : %s\n" % toHex(self.pub.K))
+        rv += ("   max signs : %d\n" % self.maxSignatures())
         return rv
 
 

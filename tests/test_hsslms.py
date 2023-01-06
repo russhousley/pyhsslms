@@ -1278,3 +1278,6 @@ class TestNewParamSets2021(unittest.TestCase):
         self.assertTrue(sig.prettyPrint())
         self.assertTrue(prv.prettyPrint())
         self.assertTrue(pub.prettyPrint())
+
+if __name__ == '__main__':
+    unittest.main()
