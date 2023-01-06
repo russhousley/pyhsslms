@@ -681,7 +681,7 @@ class LmsPrivateKey(object):
         rv += ("   SEED      : %s\n" % toHex(self.SEED))
         rv += ("   q         : %s\n" % toHex(u32(self.q)))
         rv += ("   pub       : %s\n" % toHex(self.pub))
-        rv += ("   max sig.  : %d\n" % self.maxSignatures())
+        rv += ("   max signs : %d\n" % self.maxSignatures())
         return rv
 
 
@@ -765,7 +765,7 @@ class LmsPublicKey(object):
         rv += ("   LMOTS type: %s\n" % toHex(self.lmots_type))
         rv += ("   I         : %s\n" % toHex(self.I))
         rv += ("   K         : %s\n" % toHex(self.K))
-        rv += ("   max sig.  : %d\n" % self.maxSignatures())
+        rv += ("   max signs : %d\n" % self.maxSignatures())
         return rv
 
 
@@ -957,7 +957,7 @@ class HssPrivateKey(object):
             rv += ("   SEED      : %s\n" % toHex(prv.SEED))
             rv += ("   q         : %s\n" % toHex(u32(prv.q)))
             rv += ("   pub       : %s\n" % toHex(prv.pub))
-        rv += ("   max sig.  : %d\n" % self.maxSignatures())
+        rv += ("   max signs : %d\n" % self.maxSignatures())
         return rv
 
 class HssPublicKey(object):
@@ -1004,7 +1004,7 @@ class HssPublicKey(object):
         rv += ("   LMOTS type: %s\n" % toHex(self.pub.lmots_type))
         rv += ("   I         : %s\n" % toHex(self.pub.I))
         rv += ("   K         : %s\n" % toHex(self.pub.K))
-        rv += ("   max sig.  : %d\n" % self.maxSignatures())
+        rv += ("   max signs : %d\n" % self.maxSignatures())
         return rv
 
 
