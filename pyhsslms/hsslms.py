@@ -79,6 +79,8 @@ def usage(name):
     print("                           Winternitz number")
     print("   -a HASH_ALG, --alg HASH_ALG")
     print("                           Hash algorithm (sha256 or shake)")
+    print("   -t TRUNC, --trunc TRUNC")
+    print("                           Hash algorithm truncation size")
     print(" ")
     print("optional command arguments:")
     print("   -h, --help")
@@ -134,7 +136,7 @@ def main():
                 type=str, choices=['sha256', 'shake'],
                 metavar='HASH_ALG', help='Hash algorithm (sha256 or shake)')
             parser.add_argument('-t', '--trunc', dest='trunc', default='32',
-                type=str, choices=[32, 24],
+                type=int, choices=[32, 24],
                 metavar='TRUNC', help='Hash algorithm truncation size')
             args = parser.parse_args(sys.argv[3:])
 
@@ -181,7 +183,7 @@ def main():
                      if args.lmots == 2: lmots_type = pyhsslms.lmots_shake_n24_w2
                      if args.lmots == 4: lmots_type = pyhsslms.lmots_shake_n24_w4
                      if args.lmots == 8: lmots_type = pyhsslms.lmots_shake_n24_w8
-    
+        
         pyhsslms.HssLmsPrivateKey.genkey(keyname, levels=levels,
             lms_type=lms_type, lmots_type=lmots_type)
 
@@ -257,3 +259,6 @@ def main():
         sig = pyhsslms.HssLmsSignature(filename)
         print("Signature: " + filename + ".sig")
         print(sig.hss_sig.prettyPrint())
+
+if __name__ == "__main__":
+    main()
