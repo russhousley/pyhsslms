@@ -36,3 +36,16 @@ Revision 1.1.0, released 3-Jun-2021
   even when the test fail.
 
 - Fix bug in HssLmsPublicKey.verifyFile().
+
+
+Revision 1.1.1, released 9-Jan-2023
+------------------------------------
+
+- Output the maximum number of signatures that can be produced with a
+  private key (Contribution by sebastien-riou).
+  
+- Correct bug related to the --trunc command line argument (Contribution
+  by sebastien-riou).
+
+- Make it easier to run test from the command line (Contribution by
+  sebastien-riou).
