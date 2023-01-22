@@ -74,6 +74,29 @@ else:
     print('Signature is NOT valid!')
 ```
 
+Use different parameter sets on different LMS levels:
+
+```python
+T = [pyhsslms.lms_sha256_m24_h5, pyhsslms.lms_shake_m32_h10] 
+L = [pyhsslms.lmots_sha256_n32_w8, pyhsslms.lmots_shake_n24_w4]
+priv_key = pyhsslms.HssLmsPrivateKey.genkey('mykey', levels=2, lms_type=T, lmots_type=L)
+```
+
+If you want the hierarchy to be homogeneous do either:
+
+```python
+T = [pyhsslms.lms_shake_m24_h5]*2 
+L = [pyhsslms.lmots_shake_n24_w8]*2
+priv_key = pyhsslms.HssLmsPrivateKey.genkey('mykey', levels=2, lms_type=T, lmots_type=L)
+```
+
+or
+
+```python
+T = pyhsslms.lms_shake_m24_h5 
+L = pyhsslms.lmots_shake_n24_w8
+priv_key = pyhsslms.HssLmsPrivateKey.genkey('mykey', levels=2, lms_type=T, lmots_type=L)
+```
 
 How to get pyhsslms
 -------------------
