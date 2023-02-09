@@ -225,10 +225,56 @@ class TestHSS(unittest.TestCase):
         msg = toBytes('The way to get started is to quit talking and ' + \
                       'begin doing.')
         buffer = fromHex('00000002000003ff0000000500000004' + \
-                         '3df0eddf9856dea6d6d89135515c04d3' + \
-                         '37a692dd8879b5ef3ec58f3a9bcc7595' + \
-                         'ee9a2418209ce10bc035de0f55c5eecf' + \
-                         '00000000')
+            '3df0eddf9856dea6d6d89135515c04d337a692dd8879b5ef3ec58f3a9bcc7595' + \
+            'ee9a2418209ce10bc035de0f55c5eecf' + \
+            '000000010000000500000004' + \
+            '22611c481e5b25c3bc637b771334ddd546a58e1df2d40831ab53fe94dc3a48ef' + \
+            'fe4f1f9de36f743deeaa4784dafb2a00' + \
+            '00000000' + \
+            'c584f571bbfdf285b9a8ac5bafb7738a6dfb3f22129dd88898071725791d3d91' + \
+            '8074a0f608cce80b32ad771094c4a7cfd9fc6d9e7591e9d3af9dc6e7afce8905' + \
+            '0000000000000004' + \
+            '8fe0ef60d82ee4f5681be3124436afcae2dce5d249742aeb6e1e2a5c30c19b60' + \
+            '636d00292ccc8f6f4824ca2e4d4a4e28a2b5246447adfb4328d1263b3a8d9289' + \
+            '6a53fa12d499286e7721ffd52add23f10fc2615eeed57e1193c9ac326b042f20' + \
+            'b4708bb7053fbfda2e3832e10e875154d9ca3bb9f9f8b937cda03a6cd0e530ff' + \
+            '75e9595e71e76c98ef282500bd1b9ba6d802b3c40cf98f19fc318ef06a4a746f' + \
+            'f4c6c5bf9be9a1cdd6bc161e18afcabc193c8b0e1b0123ece777b6200abcdfdd' + \
+            'faa2f36913f25cf75fa7e0b673a1e2121e76d0bdcf89a8eb2c1283b147f99516' + \
+            '81288127a882dd80c9a1bc0ecc5978780b4f529bc8dae05778d9e51bcf664b04' + \
+            '52b02eb3b9f562c9edc165d4021ec9f954f7b3f114584b49687205d4d74910a9' + \
+            '18a1c0aff404dcd987fa649f0800944e15a8791931d728fa8148ce3c68c24c12' + \
+            '065f35c2451dd88cbfc3f8853611ecd54a679b48e2c7a08131ba9b0565e1472a' + \
+            '00be955dde587fc0bb359240ff0be6e7dc2def844cc7914c1846e15303582275' + \
+            '602d094eafbf49035aaff85be6baa35a5b1243c86effbcbd9ebb2d14550cdf37' + \
+            '3a475700a69c5885665e85f874f595219bdf0bc87d87c1d105c49a73a8038462' + \
+            '433975e3d370cd2fb3cb18d05f74984250d446452171ce432dff60d0862ea3c6' + \
+            '75be0511d0857b9d0a233b5270f95770aa9579853371d208d677457d7bc37bbf' + \
+            '4d235f6dbfa0fd13621115e2a4b5c39262fb355df862e4927b9c3e42d522c9d2' + \
+            'f2433d434f6b30f1c5b4cccc3a9485d8d29b3c68431d50eb0455fd7dd49bde22' + \
+            '6092dcd38682cdf07528be25b643856e3a2c644a09785cd1210087f5f8d828e4' + \
+            '049c257669320f4fe4ca8e70ef9bc34eb6afbb65c6ab25f90e6d4f9913357a10' + \
+            'a78e5f04bd231e9297118eea9ca192a6395a415ee6c4ebbb6cff49378fbef209' + \
+            '93ffcce86aebce772a485cb49965703ec85c1476d335042723c51973f883154a' + \
+            '91f2bccc1f39e9b6fcd15b2f71f72894ef508120023b83eee2ab375a316ef64d' + \
+            'ddaa73bbaeb44a9743c85d1cb5a72c8803a645e5c8ee7eaa6133e6c483d34d1e' + \
+            '24e9206a5c23730f00658ca79d23bec53f9d61657abd36839d296aafef17135d' + \
+            '18b528f5cbbb0d86ba4553cc503ad188878fe37774448e397661f48eb7094a51' + \
+            'bb5597f0bc4b61dd4aae0a1acd84b18e4cf77a9e721e808ffa6e1d86d0db7a0a' + \
+            '6000bca678260704885e7a1d8852f78a291bf0673a40a2cbb800bd95567c4e36' + \
+            '81cf3fe16a03bc1158191243ac5e34471a9a53b54bc86e7f4e24d0d16d460127' + \
+            '4df37c707e7fe76acd8c7d5c857d6687f050f177e3f42c007bdc4787ece36635' + \
+            'fc330943353160d713bdc001ee4f67232a47f7ae258a33fea6a46ed5df9419f7' + \
+            '16259f93ff93d7b8d28eba91b2f4c536c6a70399e7a2291e2a0063179fc32d34' + \
+            'a329abf0b4015bb2f32d97b38d4bbbdbd00f30c6a9d74436c54d24f49b8b7265' + \
+            '7329106b234d82fab605b2218607ddbfa28afc230f0ed50ea38cdf63347fd307' + \
+            'cc7f2e25c50a540d29c42ea927b4eac204b012acff1d1cf6021fcda56ac27d56' + \
+            '00000005' + \
+            '9e0125d72f60a5c4e692ee92e5e965db6770d5a5a15d97d73aa9614666888971' + \
+            'ffbabfb28059284c675759522677345af3658086bd95398855072a89c92d925f' + \
+            '812c571d33d028e0e0c7741420bc788f1c223628ea54a1cd37e8c7698915d386' + \
+            'b4f4868508835e4a3bd52e2296833290946fd0f92e4475d5dd86c0325d47c59e' + \
+            '8e5f4b3314196b48875804d8bb333092270b10a7e5c2f9a6de8de15a19d30fc3')
         prv = pyhsslms.HssPrivateKey.deserialize(buffer)
         self.assertEqual(1023, prv.remaining())
         sigbuffer = prv.sign(msg)

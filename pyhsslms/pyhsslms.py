@@ -5,11 +5,6 @@
 # C code made available by Cisco Systems, Inc. in GitHub at
 # https://github.com/cisco/hash-sigs/
 #
-# For simplicity of the interfaces, all of the trees in the HSS
-# private key hierarchy are the same size; however, the signature
-# verification code works correctly on signatures that are generated
-# by another program that allows different tree sizes in the hierarchy.
-#
 #
 # Copyright (c) 2020-2021, Vigil Security, LLC
 # All rights reserved.
@@ -167,6 +162,8 @@ err_bad_value             = 'parameter has unknown value'
 err_bad_number_of_levels  = 'unsupported number of levels'
 err_private_key_exhausted = 'private key is exhausted'
 err_algorithm_mismatch    = 'LMOTS and LMS with different hash algorithms'
+err_level_mismatch        = 'level mismatch in given parameters'
+
 
 # ----------------------------------------------------------------------
 # The internal utility routines
@@ -858,43 +855,101 @@ class HssPrivateKey(object):
     """
     Hierarchical Signature System (HSS) Private Key
     """
-    def __init__(self, levels=2, lms_type=lms_sha256_m32_h5,
-                 lmots_type=lmots_sha256_n32_w8, SEED=None,
-                 remaining_signatures=None, prv0=None):
+    def __init__(self, levels=2, lms_type=None, lmots_type=None,
+                 SEED=None, I=None, remaining_signatures=None, prv=None, sig=None):
         if levels < 1 or levels > MaxHssLevels:
             ValueError(err_bad_number_of_levels, str(levels))
-        if lmots_type not in lmots_params:
-            raise ValueError(err_unknown_typecode, toHex(lmots_type))
-        if lms_type not in lms_params:
-            raise ValueError(err_unknown_typecode, toHex(lms_type))
         self.levels = levels
-        self.lms_type = lms_type
-        self.lmots_type = lmots_type
-        alg2, m, h = lms_params[lms_type]
-        alg, n, p, w, ls = lmots_params[lmots_type]
-        if (alg != alg2):
-            raise ValueError(err_algorithm_mismatch, alg + ' and ' + alg2)
+        
+        # assign default types if none are given
+        # convert given types to lists if not already
+        if lms_type == None or lmots_type == None:
+            lms_type = [lms_sha256_m32_h5]*levels
+            lmots_type = [lmots_sha256_n32_w8]*levels
+            self.lms_type = lms_type
+            self.lmots_type = lmots_type
+        else:
+            if isinstance(lms_type, list) == False:
+                lms_type = [lms_type]*levels
+            if isinstance(lmots_type, list) == False:
+                lmots_type = [lmots_type]*levels 
+            self.lms_type = lms_type
+            self.lmots_type = lmots_type
+        
+        # check that given level matches length of given parameter tuples
+        if not ( (type(lms_type) is list) and (type(lmots_type) is list)
+                 and (levels == len(lms_type)) and (levels == len(lmots_type)) ):
+            raise ValueError(err_level_mismatch, str(levels) + ' level(s) with type lists ' + str(lms_type) + ' and ' + str(lmots_type))
+        
+        # check that given typecodes are known
+        if not all(item in lmots_params for (item) in lmots_type):
+            raise ValueError(err_unknown_typecode, str([toHex(item) for item in lmots_type]))
+        if not all(item in lms_params for (item) in lms_type):
+            raise ValueError(err_unknown_typecode, str([toHex(item) for item in lms_type]))
+         
+        # collect the parameter tuples
+        # Parameters alg2, m, h for each given LMS type
+        lms_prm = [ lms_params[j] for j in lms_type ] 
+        # Parameters alg, n, p, w, ls for each given LM-OTS type
+        lmots_prm = [ lmots_params[j] for j in lmots_type ] 
+        
+        # check for matching parameters on all levels
+        if ( list(zip(*lms_prm))[0] != list(zip(*lmots_prm))[0] ):
+            raise ValueError(err_algorithm_mismatch, str(list(zip(*lms_prm))[0]) + ' and ' + str(list(zip(*lmots_prm))[0])) 
+        
+        # height is given as a tuple
+        h = list(zip(*lms_prm))[2] 
+                
         if SEED is None:
-            self.SEED = randBytes(n)
+            self.SEED = [randBytes(item[1]) for item in lmots_prm]
         else:
-            if len(SEED) != n:
-                raise ValueError(err_bad_length, str(len(SEED)))
+            # check if given SEED matches levels and parameters 
+            if not ((type(SEED) is list) and (len(SEED) == levels)):
+                raise ValueError(err_level_mismatch, 'Value SEED expected as list with ' + str(levels) + ' elements')
+            # check if each individual SEED has correct length
+            if [len(item) for item in SEED] != [item[1] for item in lmots_prm]:
+                raise ValueError(err_bad_length, str([len(item) for item in SEED]))
             self.SEED = SEED
-        if prv0 is None:
-            prv0 = LmsPrivateKey(lms_type=lms_type,
-                                 lmots_type=lmots_type, SEED=SEED)
-        self.prv = [prv0]
-        if remaining_signatures is None:
-            self._signatures_remaining = 2**(levels*h)
+        
+        if I is None:
+            self.I = [randBytes(LenI)]*levels
         else:
-            self._signatures_remaining = remaining_signatures
-        self.pub = [prv0.publicKey()]
-        self.sig = []
-        for i in range(1, self.levels):
-            self.prv.append(LmsPrivateKey(
-                lms_type=lms_type, lmots_type=lmots_type, SEED=SEED))
-            self.pub.append(self.prv[-1].publicKey())
-            self.sig.append(self.prv[-2].sign(self.pub[-1].serialize()))
+            # check if given I matches levels and parameters 
+            if not ((type(I) is list) and (len(I) == levels)):
+                raise ValueError(err_level_mismatch, 'Value I expected as list with ' + str(levels) + ' elements')
+            # check if each individual SEED has correct length
+            if [len(item) for item in I] != [LenI]*levels:
+                raise ValueError(err_bad_length, str([len(item) for item in I]))
+            self.I = I
+            
+        if remaining_signatures is None:
+            # sum over all individual heights
+            self._signatures_remaining = 2**(sum(h)) 
+        else:
+            self._signatures_remaining = remaining_signatures  
+            
+        if prv is None:
+            self.prv = [LmsPrivateKey(lms_type=lms_type[i],
+                                      lmots_type=lmots_type[i],
+                                      SEED=self.SEED[i],I=self.I[i])
+                        for i in range(0,levels)]
+        else:
+            # check that given level matches number of given private keys
+            if not ( (type(prv) is list ) and (levels == len(prv)) ):
+                raise ValueError(err_level_mismatch, str(levels) + ' level(s) with list of private key(s)' + str(prv))
+            self.prv = prv
+        
+        self.pub = [x.publicKey() for x in self.prv]
+        
+        if sig is None:
+            self.sig = []
+            for i in range(1, self.levels):
+                self.sig.append(self.prv[i-1].sign(self.pub[i].serialize()))
+        else:
+            # check that given level(-1) matches number of given signatures
+            if not ( (type(sig) is list ) and ((levels-1) == len(sig)) ):
+                raise ValueError(err_level_mismatch, str(levels) + ' level(s) with list of signatures' + str(prv))
+            self.sig = sig
 
     def sign(self, message):
         if self._signatures_remaining == 0:
@@ -906,8 +961,10 @@ class HssPrivateKey(object):
             self.sig.pop()
         # refresh exhausted trees
         while (len(self.prv) < self.levels):
-            self.prv.append(LmsPrivateKey(lms_type=self.lms_type,
-                                lmots_type=self.lmots_type, SEED=self.SEED))
+            i = len(self.prv)
+            self.prv.append(LmsPrivateKey(lms_type=self.lms_type[i-1],
+                                          lmots_type=self.lmots_type[i-1],
+                                          SEED=self.SEED[i-1]))
             self.pub.append(self.prv[-1].publicKey())
             self.sig.append(self.prv[-2].sign(self.pub[-1].serialize()))           
         # sign message
@@ -928,13 +985,22 @@ class HssPrivateKey(object):
     def is_exhausted(self):
         return not bool(self._signatures_remaining)
 
+    # Sum over all individual heights
     def maxSignatures(self):
-        alg2, m, h = lms_params[self.lms_type]
-        return 2**(self.levels*h)
+        lms_prm = [ lms_params[j] for j in self.lms_type ]
+        h = list(zip(*lms_prm))[2]
+        return 2**(sum(h)) 
 
     def serialize(self):
-        return u32(self.levels) + u32(self._signatures_remaining) + \
-               self.prv[0].serialize()
+        s = u32(self.levels) + u32(self._signatures_remaining)
+        for x in self.prv:
+            s += x.serialize() # collects lms_type, lmots_type, seed, I, q
+        # attach pub and sig arrays, Cf. §6.1 of RFC8554
+        for y in self.prv:
+            s += y.pub
+        for z in self.sig:
+            s += z
+        return s
 
     @classmethod
     def deserialize(cls, buffer):
@@ -942,9 +1008,34 @@ class HssPrivateKey(object):
             raise ValueError(err_bad_length, str(len(buffer)))
         levels = int32(buffer[0:4])
         rs = int32(buffer[4:8])
-        prv = LmsPrivateKey.deserialize(buffer[8:])
-        return cls(levels, lms_type=prv.lms_type, lmots_type=prv.lmots_type, \
-                   remaining_signatures=rs, prv0=prv)
+        ofs = 8  # init offset
+        prv = [] # init prv key list
+        sig_size = []
+        pub_size = 0
+        for i in range(1,levels+1):
+            lms_type = buffer[ofs+0:ofs+4]
+            lmots_type = buffer[ofs+4:ofs+8]
+            if lmots_type not in lmots_params:
+                raise ValueError(err_unknown_typecode, toHex(lmots_type))
+            if lms_type not in lms_params:
+                raise ValueError(err_unknown_typecode, toHex(lms_type))
+            alg, n, p, w, ls = lmots_params[lmots_type]
+            alg2, m, h = lms_params[lms_type]
+            if (alg != alg2):
+                raise ValueError(err_algorithm_mismatch, alg + ' and ' + alg2)
+            prv.append(LmsPrivateKey.deserialize(buffer[ofs:ofs+8+n+LenI+4]))
+            sig_size.append(4+4+(n*(p+1))+4+m*h)
+            pub_size += n
+            ofs = ofs + (8+n+LenI+4)
+        sig = []
+        rest = buffer[ofs+pub_size:]
+        for i in range(1,levels):
+            sig.append(rest[0:sig_size[i-1]])
+            rest = rest[sig_size[i-1]:]
+        return cls(levels, \
+                   lms_type=[x.lms_type for x in prv], \
+                   lmots_type=[y.lmots_type for y in prv], \
+                   remaining_signatures=rs, prv=prv, sig=sig)
 
     def prettyPrint(self):
         rv = "HSS private key\n"
@@ -958,6 +1049,11 @@ class HssPrivateKey(object):
             rv += ("   q         : %s\n" % toHex(u32(prv.q)))
             rv += ("   pub       : %s\n" % toHex(prv.pub))
         rv += ("   max signs : %d\n" % self.maxSignatures())
+        for j, sig in enumerate(self.sig):
+            rv += ("\n")
+            rv += ("Signature of level=%01d LMS public key:\n" % (j+1))
+            rv += ("\n")
+            rv += LmsSignature.deserialize(sig).prettyPrint()
         return rv
 
 class HssPublicKey(object):
@@ -1094,9 +1190,7 @@ class HssLmsPrivateKey():
         self.hss_prv = HssPrivateKey.deserialize(prv_buffer)
 
     @classmethod
-    def genkey(cls, keyname, levels=2,
-               lms_type=lms_sha256_m32_h5,
-               lmots_type=lmots_sha256_n32_w8):
+    def genkey(cls, keyname, levels=2, lms_type=None, lmots_type=None):
         """
         Generate a HSS/LMS private and public keys, saving them
         in files.
@@ -1163,10 +1257,23 @@ from .pyhsslms import lms_shake_m24_h25
         """
         if levels < 1 or levels > MaxHssLevels:
             raise ValueError(err_bad_number_of_levels)
-        if not lms_type in lms_params:
+        
+        # assign default types if none are given
+        # convert given types to lists if not already
+        if lms_type == None or lmots_type == None:
+            lms_type = [lms_sha256_m32_h5]*levels
+            lmots_type = [lmots_sha256_n32_w8]*levels
+        else:
+            if isinstance(lms_type, list) == False:
+                lms_type = [lms_type]*levels
+            if isinstance(lmots_type, list) == False:
+                lmots_type = [lmots_type]*levels 
+            
+        if not all(item in lms_params for (item) in lms_type):
             raise ValueError(err_unknown_typecode)
-        if not lmots_type in lmots_params:
-            raise ValueError(err_unknown_typecode)
+        if not all(item in lmots_params for (item) in lmots_type):
+            raise ValueError(err_unknown_typecode)    
+        
         key_filename = os.path.abspath(keyname)
         prv_filename = key_filename + '.prv'
         if os.path.exists(prv_filename):
