@@ -933,6 +933,7 @@ class HssPrivateKey(object):
         return 2**(self.levels*h)
 
     def serialize(self):
+        assert self._signatures_remaining.bit_length() <= 32, "_signatures_remaining=0x%x, %d bits"%(self._signatures_remaining,self._signatures_remaining.bit_length())
         return u32(self.levels) + u32(self._signatures_remaining) + \
                self.prv[0].serialize()
 
