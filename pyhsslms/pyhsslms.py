@@ -933,6 +933,7 @@ class HssPrivateKey(object):
         return 2**(self.levels*h)
 
     def serialize(self):
+        assert self._signatures_remaining.bit_length() <= 32, "_signatures_remaining=0x%x, %d bits"%(self._signatures_remaining,self._signatures_remaining.bit_length())
         return u32(self.levels) + u32(self._signatures_remaining) + \
                self.prv[0].serialize()
 
@@ -1042,7 +1043,7 @@ class HssLmsSignature():
         try:
             with open(sig_filename, 'rb') as f:
                 sig_buffer = f.read()
-        except Exception:
+        except IOError:
             raise NoFileError
         self.sig_filename = sig_filename
         self.hss_sig = HssSignature.deserialize(sig_buffer)
@@ -1081,12 +1082,12 @@ class HssLmsPrivateKey():
         try:
             with open(prv_filename, 'rb') as f:
                 prv_buffer = f.read()
-        except Exception:
+        except IOError:
             raise NoFileError
         try:
             with open(pub_filename, 'rb') as f:
                 pub_buffer = f.read()
-        except Exception:
+        except IOError:
             raise NoFileError
         self.pub_filename = pub_filename
         self.prv_filename = prv_filename
@@ -1179,12 +1180,12 @@ from .pyhsslms import lms_shake_m24_h25
         try:
             with open(prv_filename, 'wb') as prv_file:
                 prv_file.write(hss_prv.serialize())
-        except Exception:
+        except IOError:
             return False
         try:
             with open(pub_filename, 'wb') as pub_file:
                 pub_file.write(hss_prv.publicKey().serialize())
-        except Exception:
+        except IOError:
            return False
         return cls(key_filename)
 
@@ -1220,18 +1221,18 @@ from .pyhsslms import lms_shake_m24_h25
         try:
             with open(pathname, 'rb') as to_sign_file:
                 buffer = to_sign_file.read()
-        except Exception:
+        except IOError:
             raise NoFileError
         sig_buffer = self.hss_prv.sign(buffer)
         try:
             with open(self.prv_filename, 'wb') as f:
                 f.write(self.hss_prv.serialize())
-        except Exception:
+        except IOError:
             return False
         try:
             with open(sig_pathname, 'wb') as sig_file:
                 sig_file.write(sig_buffer)
-        except Exception:
+        except IOError:
             return False
         return True
 
@@ -1260,7 +1261,7 @@ from .pyhsslms import lms_shake_m24_h25
         try:
             with open(self.prv_filename, 'wb') as f:
                 f.write(self.hss_prv.serialize())
-        except Exception:
+        except IOError:
             return toBytes('')
         return sig_buffer
 
@@ -1296,7 +1297,7 @@ class HssLmsPublicKey():
         try:
             with open(pub_filename, 'rb') as f:
                 pub_buffer = f.read()
-        except Exception:
+        except IOError:
             raise NoFileError
         self.pub_filename = pub_filename
         self.hss_pub = HssPublicKey.deserialize(pub_buffer)
@@ -1344,12 +1345,12 @@ class HssLmsPublicKey():
         try:
             with open(pathname, 'rb') as f:
                 buffer = f.read()
-        except Exception:
+        except IOError:
             raise NoFileError
         try:
             with open(sig_pathname, 'rb') as f:
                 sigbuffer = f.read()
-        except Exception:
+        except IOError:
             raise NoFileError
         return self.hss_pub.verify(buffer, sigbuffer)
 
