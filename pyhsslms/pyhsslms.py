@@ -461,8 +461,8 @@ class LmotsPublicKey:
         if lmots_type not in lmots_params():
            raise ValueError(err_unknown_typecode, toHex(lmots_type))
         alg, n, p, w, ls = lmots_params[lmots_type]
-        rv = 4+(2*n)
-        if len(buffer) < rv:
+        rv = 4 + LenS + n
+        if len(buffer) != rv:
             raise ValueError(err_bad_length, str(len(buffer)))
         return rv
 
