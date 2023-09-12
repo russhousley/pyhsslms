@@ -218,6 +218,18 @@ class TestLMS(unittest.TestCase):
         self.assertTrue(prv.prettyPrint())
         self.assertTrue(pub.prettyPrint())
 
+    def testRandomPublicKeySerializeDeserialize(self):
+        msg = toBytes('The way to get started is to quit talking and ' + \
+                      'begin doing.')
+        prv = pyhsslms.LmotsPrivateKey()
+        pub = prv.publicKey()
+        pubserial = pub.serialize()
+        pub2 = pyhsslms.LmotsPublicKey.deserialize(pubserial)
+        self.assertTrue(pub.S == pub2.S)
+        self.assertTrue(pub.K == pub2.K)
+        self.assertTrue(pub.type == pub2.type)
+        self.assertTrue(pub.prettyPrint() == pub2.prettyPrint())
+
 
 class TestHSS(unittest.TestCase):
 

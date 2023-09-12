@@ -443,13 +443,14 @@ class LmotsPublicKey:
         if len(buffer) < 4:
             raise ValueError(err_bad_length, str(len(buffer)))
         lmots_type = buffer[0:4]
-        if lmots_type not in lmots_params():
+        if lmots_type not in lmots_params:
            raise ValueError(err_unknown_typecode, toHex(lmots_type))
         alg, n, p, w, ls = lmots_params[lmots_type]
-        if len(buffer) != 4+(2*n):
-            raise ValueError(err_bad_length)
-        S = buffer[4:4+n]
-        K = buffer[4+n:4+2*n]
+        buf_size = 4 + LenS + n
+        if len(buffer) != buf_size:
+            raise ValueError(err_bad_length, f"{str(len(buffer))} != {buf_size}")
+        S = buffer[4:4+LenS]
+        K = buffer[4+LenS:(4+LenS)+n]
         return cls(S, K, lmots_type)
 
     @classmethod
