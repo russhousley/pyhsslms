@@ -39,7 +39,7 @@ import os
 import tempfile
 import unittest
 from pyhsslms import *
-from pyhsslms.compat import fromHex, toHex, toBytes, charNum, u8
+from pyhsslms.compat import fromHex, toHex, toBytes, charNum, u8, u32
 
 
 def mangle(buffer, offset=30):
@@ -167,6 +167,30 @@ class TestLMOTS(unittest.TestCase):
         self.assertIn('SEED      : 1e305866bfc4d18c4735bfc677711109', prvpp)
         pubpp = pub.prettyPrint()
         self.assertIn('I         : c6d47a98577cd2f13007908fd14309ca', pubpp)
+
+    def testPublicKeyGeneration(self):
+        I = fromHex('1'*32)
+        q = u32(123456789)
+        SEED = fromHex('3'*64)
+        lmots_type = lmots_sha256_n32_w2
+
+        S = I + q
+        prv = pyhsslms.LmotsPrivateKey(S, SEED, lmots_type)
+        pub = prv.publicKey()
+
+        expected_pub_bytes = fromHex('00000002' + \
+            # I - 16 bytes
+            '11111111111111111111111111111111' + \
+            # Q - 32-bit number
+            '075bcd15' + \
+            # KEY
+            '0cc6d68ead0190ad29b4125af6ca9ff1c4f23c4db4524411974653c9fb0c6e76')
+        expected_pub = pyhsslms.LmotsPublicKey.deserialize(expected_pub_bytes)
+
+        self.assertEqual(pub.type, expected_pub.type)
+        self.assertEqual(pub.S, expected_pub.S)
+        self.assertEqual(pub.K, expected_pub.K)
+        self.assertEqual(pub.serialize(), expected_pub.serialize())
 
     def testRandomPrivateKey(self):
         msg = toBytes('The way to get started is to quit talking and ' + \

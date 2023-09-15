@@ -387,7 +387,7 @@ class LmotsPrivateKey:
         hash = H_start(alg)
         H_update(hash, self.I + self.q + D_PBLC)
         for i in range(0, p):
-            tmp = H(alg, self.I + self.q + u16(i+1) + D_PRG + self.SEED, n)
+            tmp = H(alg, self.I + self.q + u16(i) + D_PRG + self.SEED, n)
             for j in range(0, (2**w)-1):
                 tmp = H(alg, self.I + self.q + u16(i) + u8(j) + tmp, n)
             H_update(hash, tmp)
