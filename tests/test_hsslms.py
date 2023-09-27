@@ -174,8 +174,7 @@ class TestLMOTS(unittest.TestCase):
         SEED = fromHex('3'*64)
         lmots_type = lmots_sha256_n32_w2
 
-        S = I + q
-        prv = pyhsslms.LmotsPrivateKey(S, SEED, lmots_type)
+        prv = pyhsslms.LmotsPrivateKey(I, q, SEED, lmots_type)
         pub = prv.publicKey()
 
         expected_pub_bytes = fromHex('00000002' + \
@@ -188,7 +187,8 @@ class TestLMOTS(unittest.TestCase):
         expected_pub = pyhsslms.LmotsPublicKey.deserialize(expected_pub_bytes)
 
         self.assertEqual(pub.type, expected_pub.type)
-        self.assertEqual(pub.S, expected_pub.S)
+        self.assertEqual(pub.I, expected_pub.I)
+        self.assertEqual(pub.q, expected_pub.q)
         self.assertEqual(pub.K, expected_pub.K)
         self.assertEqual(pub.serialize(), expected_pub.serialize())
 
