@@ -402,7 +402,7 @@ class LmotsPrivateKey:
         V = hash1 + checksum(hash1, w, ls)
         y = []
         for i in range(0, p):
-            tmp = H(alg, self.I + self.q + u16(i+1) + D_PRG + self.SEED, n)
+            tmp = H(alg, self.I + self.q + u16(i) + D_PRG + self.SEED, n)
             for j in range(0, coef(V, i, w)):
                 tmp = H(alg, self.I + self.q + u16(i) + u8(j) + tmp, n)
             y.append(tmp)
