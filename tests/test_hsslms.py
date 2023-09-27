@@ -236,10 +236,10 @@ class TestLMS(unittest.TestCase):
         self.assertIn('LMOTS type: 00000004', prvpp)
         self.assertIn('I         : e4a9fccb86dc9c49d71b72d5696acb54', prvpp)
         self.assertIn('SEED      : 0c0fe552dcf77d4bbe16b28605759ea4', prvpp)
-        self.assertIn('pub       : a8b35f4c521183a05d81fbcf8a81ffc9', prvpp)
+        self.assertIn('pub       : 7468c0058fc7e1dd87aef69fa5bbf1fc', prvpp)
         pubpp = pub.prettyPrint()
         self.assertIn('I         : e4a9fccb86dc9c49d71b72d5696acb54', pubpp)
-        self.assertIn('K         : a8b35f4c521183a05d81fbcf8a81ffc9', pubpp)
+        self.assertIn('K         : 7468c0058fc7e1dd87aef69fa5bbf1fc', pubpp)
 
     def testRandomPrivateKey(self):
         msg = toBytes('The way to get started is to quit talking and ' + \
@@ -300,7 +300,7 @@ class TestHSS(unittest.TestCase):
         pubpp = pub.prettyPrint()
         self.assertIn('levels    : 2', pubpp)
         self.assertIn('I         : ee9a2418209ce10bc035de0f55c5eecf', pubpp)
-        self.assertIn('K         : c584f571bbfdf285b9a8ac5bafb7738a', pubpp)
+        self.assertIn('K         : a3894ff49d2fa0e4a85b214f7c155901', pubpp)
 
     def testSmallRandomPrivateKey(self):
         msg = toBytes('The way to get started is to quit talking and ' + \
