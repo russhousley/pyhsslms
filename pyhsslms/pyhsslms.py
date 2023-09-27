@@ -145,7 +145,7 @@ lms_params = {
 #
 MaxHssLevels = 8
 LenI = 16
-LenS = LenI + 4
+LenQ = 4
 
 
 # Diversification constants
@@ -290,18 +290,20 @@ class LmotsSignature():
     def serialize(self):
         return self.type + self.C + serialize_list(self.y)
 
-    def buildPublic(self, S, message):
+    def buildPublic(self, I, q, message):
         alg, n, p, w, ls = lmots_params[self.type]
-        if len(S) != LenS:
-            raise ValueError(err_bad_length, str(len(S)))
-        hash1 = H(alg, S + D_MESG + self.C + message, n)
+        if len(I) != LenI:
+            raise ValueError(err_bad_length, str(len(I)))
+        if len(q) != LenQ:
+            raise ValueError(err_bad_length, str(len(q)))
+        hash1 = H(alg, I + q + D_MESG + self.C + message, n)
         V = hash1 + checksum(hash1, w, ls)
         hash = H_start(alg)
-        H_update(hash, S + D_PBLC)
+        H_update(hash, I + q + D_PBLC)
         for i, y in enumerate(self.y):
             tmp = y
             for j in range(coef(V, i, w), (2**w)-1):
-                tmp = H(alg, S + u16(i) + u8(j) + tmp, n)
+                tmp = H(alg, I + q + u16(i) + u8(j) + tmp, n)
             H_update(hash, tmp)
         return H_finish(hash, n)
 
@@ -351,17 +353,21 @@ class LmotsPrivateKey:
     """
     # Generate an LMOTS Private Key
     #
-    def __init__(self, S=None, SEED=None, lmots_type=lmots_sha256_n32_w8):
+    def __init__(self, I=None, q=None, SEED=None, lmots_type=lmots_sha256_n32_w8):
         if lmots_type not in lmots_params:
             raise ValueError(err_unknown_typecode, toHex(lmots_type))
         self.type = lmots_type
         alg, n, p, w, ls = lmots_params[lmots_type]
-        if S is None:
-            self.S = randBytes(LenS)
+        if I is None or q is None:
+            self.I = randBytes(LenI)
+            self.q = randBytes(LenQ)
         else:
-            if len(S) != LenS:
-                raise ValueError(err_bad_length, str(len(S)))
-            self.S = S
+            if len(I) != LenI:
+                raise ValueError(err_bad_length, str(len(I)))
+            if len(q) != LenQ:
+                raise ValueError(err_bad_length, str(len(q)))
+            self.I = I
+            self.q = q
         if SEED is None:
             self.SEED = randBytes(n)
         else:
@@ -379,26 +385,26 @@ class LmotsPrivateKey:
     def publicKey(self): 
         alg, n, p, w, ls = lmots_params[self.type]
         hash = H_start(alg)
-        H_update(hash, self.S + D_PBLC)
+        H_update(hash, self.I + self.q + D_PBLC)
         for i in range(0, p):
-            tmp = H(alg, self.S + u16(i+1) + D_PRG + self.SEED, n)
+            tmp = H(alg, self.I + self.q + u16(i+1) + D_PRG + self.SEED, n)
             for j in range(0, (2**w)-1):
-                tmp = H(alg, self.S + u16(i) + u8(j) + tmp, n)
+                tmp = H(alg, self.I + self.q + u16(i) + u8(j) + tmp, n)
             H_update(hash, tmp)
-        return LmotsPublicKey(self.S, H_finish(hash, n), self.type)
+        return LmotsPublicKey(self.I, self.q, H_finish(hash, n), self.type)
 
     def sign(self, message):
         if self._signatures_remaining != 1:
             raise ValueError(err_private_key_exhausted)
         alg, n, p, w, ls = lmots_params[self.type]
         C = randBytes(n)
-        hash1 = H(alg, self.S + D_MESG + C + message, n)
+        hash1 = H(alg, self.I + self.q + D_MESG + C + message, n)
         V = hash1 + checksum(hash1, w, ls)
         y = []
         for i in range(0, p):
-            tmp = H(alg, self.S + u16(i+1) + D_PRG + self.SEED, n)
+            tmp = H(alg, self.I + self.q + u16(i+1) + D_PRG + self.SEED, n)
             for j in range(0, coef(V, i, w)):
-                tmp = H(alg, self.S + u16(i) + u8(j) + tmp, n)
+                tmp = H(alg, self.I + self.q + u16(i) + u8(j) + tmp, n)
             y.append(tmp)
         self._signatures_remaining = 0
         return LmotsSignature(C, y, self.type).serialize()
@@ -406,7 +412,8 @@ class LmotsPrivateKey:
     def prettyPrint(self):
         rv = "LMOTS private key\n"
         rv += ("   LMOTS type: %s\n" % toHex(self.type))
-        rv += ("   S         : %s\n" % toHex(self.S))
+        rv += ("   I         : %s\n" % toHex(self.I))
+        rv += ("   q         : %s\n" % toHex(self.q))
         rv += ("   SEED      : %s\n" % toHex(self.SEED))
         return rv
 
@@ -415,8 +422,9 @@ class LmotsPublicKey:
     """
     Leighton-Micali One Time Signature Public Key
     """
-    def __init__(self, S, K, lmots_type):
-        self.S = S
+    def __init__(self, I, q, K, lmots_type):
+        self.I = I
+        self.q = q
         self.K = K
         self.type = lmots_type
 
@@ -425,18 +433,18 @@ class LmotsPublicKey:
         if (signature.type != self.type):
             raise ValueError(err_unknown_typecode)
         alg, n, p, w, ls = lmots_params[self.type]
-        hash1 = H(alg, self.S + D_MESG + signature.C + message, n)
+        hash1 = H(alg, self.I + self.q + D_MESG + signature.C + message, n)
         V = hash1 + checksum(hash1, w, ls)
         hash = H_start(alg)
-        H_update(hash, self.S + D_PBLC)
+        H_update(hash, self.I + self.q + D_PBLC)
         for i, tmp in enumerate(signature.y):
             for j in range(coef(V, i, w), (2**w)-1):
-                tmp = H(alg, self.S + u16(i) + u8(j) + tmp, n)
+                tmp = H(alg, self.I + self.q + u16(i) + u8(j) + tmp, n)
             H_update(hash, tmp)
         return self.K == H_finish(hash, n)
 
     def serialize(self):
-        return self.type + self.S + self.K 
+        return self.type + self.I + self.q + self.K 
 
     @classmethod
     def deserialize(cls, buffer):
@@ -446,12 +454,13 @@ class LmotsPublicKey:
         if lmots_type not in lmots_params:
            raise ValueError(err_unknown_typecode, toHex(lmots_type))
         alg, n, p, w, ls = lmots_params[lmots_type]
-        buf_size = 4 + LenS + n
+        buf_size = 4 + LenI + LenQ + n
         if len(buffer) != buf_size:
             raise ValueError(err_bad_length, f"{str(len(buffer))} != {buf_size}")
-        S = buffer[4:4+LenS]
-        K = buffer[4+LenS:(4+LenS)+n]
-        return cls(S, K, lmots_type)
+        I = buffer[4:4+LenI]
+        q = buffer[4+LenI:4+LenI+LenQ]
+        K = buffer[4+LenI+LenQ:(4+LenI+LenQ)+n]
+        return cls(I, q, K, lmots_type)
 
     @classmethod
     def sizeof(cls, buffer):
@@ -461,7 +470,7 @@ class LmotsPublicKey:
         if lmots_type not in lmots_params():
            raise ValueError(err_unknown_typecode, toHex(lmots_type))
         alg, n, p, w, ls = lmots_params[lmots_type]
-        rv = 4 + LenS + n
+        rv = 4 + LenI + LenQ + n
         if len(buffer) != rv:
             raise ValueError(err_bad_length, str(len(buffer)))
         return rv
@@ -469,7 +478,8 @@ class LmotsPublicKey:
     def prettyPrint(self):
         rv = "LMOTS public key\n"
         rv += ("   LMOTS type: %s\n" % toHex(self.type))
-        rv += ("   S         : %s\n" % toHex(self.S))
+        rv += ("   I         : %s\n" % toHex(self.I))
+        rv += ("   q         : %s\n" % toHex(self.q))
         rv += ("   K         : %s\n" % toHex(self.K))
         return rv
 
@@ -599,8 +609,7 @@ class LmsPrivateKey(object):
         self.ots_pub = []
         self._nodes = {}
         for j in range(0, 2**h):
-            S = self.I + u32(j)
-            priv = LmotsPrivateKey(S=S, SEED=self.SEED, lmots_type=lmots_type)
+            priv = LmotsPrivateKey(I=self.I, q=u32(j), SEED=self.SEED, lmots_type=lmots_type)
             pub = priv.publicKey()
             self.ots_priv.append(priv)
             self.ots_pub.append(pub)
@@ -708,8 +717,7 @@ class LmsPublicKey(object):
             return False
         if lms_sig.q > 2**h:
             return False
-        S = self.I + u32(lms_sig.q)
-        Kc = lms_sig.lmots_sig.buildPublic(S, message)
+        Kc = lms_sig.lmots_sig.buildPublic(self.I, u32(lms_sig.q), message)
         node_num = lms_sig.q + (2**h)
         tmp = H(alg, self.I + u32(node_num) + D_LEAF + Kc, m)
         for pv in lms_sig.path:

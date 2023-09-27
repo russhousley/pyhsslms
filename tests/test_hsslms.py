@@ -93,6 +93,8 @@ class TestLMOTS(unittest.TestCase):
 
     def testBuildPublic(self):
         S = fromHex('61a5d57d37f5e46bfb7520806b07a1b800000005')
+        I = S[:pyhsslms.LenI]
+        q = S[pyhsslms.LenI:pyhsslms.LenI+pyhsslms.LenQ]
         msg = fromHex('0000000500000004d2f14ff6346af964569f7d6cb880a1b66' + \
          'c5004917da6eafe4d9ef6c6407b3db0e5485b122d9ebe15cda93cfec582d7ab')
         buf = fromHex( '00000004d32b56671d7eb98833c49b433c272586bc' + \
@@ -135,16 +137,18 @@ class TestLMOTS(unittest.TestCase):
         expected_pub = fromHex('87be83923a22106731e8f10f826faf4d02' + \
          '17b07d99694d1174d350fba7d578a1')
         sig = pyhsslms.LmotsSignature.deserialize(buf)
-        pub = sig.buildPublic(S, msg)
+        pub = sig.buildPublic(I, q, msg)
         self.assertEqual(expected_pub, pub)
 
     def testKnownPrivateKey(self):
         msg = toBytes('The way to get started is to quit talking and ' + \
                       'begin doing.')
         S = fromHex('c6d47a98577cd2f13007908fd14309ca00000001')
+        I = S[:pyhsslms.LenI]
+        q = S[pyhsslms.LenI:pyhsslms.LenI+pyhsslms.LenQ]
         seed = fromHex('1e305866bfc4d18c4735bfc677711109' + \
                              'a886656dc432e39281bc5a129b518172')
-        prv = pyhsslms.LmotsPrivateKey(S=S, SEED=seed)
+        prv = pyhsslms.LmotsPrivateKey(I=I, q=q, SEED=seed)
         self.assertEqual(1, prv.remaining())
         self.assertFalse(prv.is_exhausted())
         sigbuffer = prv.sign(msg)
@@ -159,10 +163,10 @@ class TestLMOTS(unittest.TestCase):
         self.assertTrue(sig.prettyPrint())
         prvpp = prv.prettyPrint()
         self.assertIn('LMOTS type: 00000004', prvpp)
-        self.assertIn('S         : c6d47a98577cd2f13007908fd14309ca', prvpp)
+        self.assertIn('I         : c6d47a98577cd2f13007908fd14309ca', prvpp)
         self.assertIn('SEED      : 1e305866bfc4d18c4735bfc677711109', prvpp)
         pubpp = pub.prettyPrint()
-        self.assertIn('S         : c6d47a98577cd2f13007908fd14309ca', pubpp)
+        self.assertIn('I         : c6d47a98577cd2f13007908fd14309ca', pubpp)
 
     def testRandomPrivateKey(self):
         msg = toBytes('The way to get started is to quit talking and ' + \
@@ -234,7 +238,8 @@ class TestLMS(unittest.TestCase):
         pub = prv.publicKey()
         pubserial = pub.serialize()
         pub2 = pyhsslms.LmotsPublicKey.deserialize(pubserial)
-        self.assertTrue(pub.S == pub2.S)
+        self.assertTrue(pub.I == pub2.I)
+        self.assertTrue(pub.q == pub2.q)
         self.assertTrue(pub.K == pub2.K)
         self.assertTrue(pub.type == pub2.type)
         self.assertTrue(pub.prettyPrint() == pub2.prettyPrint())
