@@ -948,9 +948,10 @@ class HssPrivateKey(object):
         return 2**(self.levels*h)
 
     def serialize(self):
-        assert self._signatures_remaining.bit_length() <= 32, "_signatures_remaining=0x%x, %d bits"%(self._signatures_remaining,self._signatures_remaining.bit_length())
+        # assert self._signatures_remaining.bit_length() <= 32, "_signatures_remaining=0x%x, %d bits"%(self._signatures_remaining,self._signatures_remaining.bit_length())
         
-        rv = u32(self.levels) + u32(0)
+        # make sure to maintain 4-byte padding of all 1's to indicate we should use deserializeV2
+        rv = u32(self.levels) + fromHex('1'*8)
         serialized_prv0 = self.prv[0].serialize()
         rv += u32(len(serialized_prv0)) + serialized_prv0
 
@@ -968,7 +969,7 @@ class HssPrivateKey(object):
             raise ValueError(err_bad_length, str(len(buffer)))
         levels = int32(buffer[0:4])
         rs = int32(buffer[4:8])
-        if rs == 0:
+        if rs == int32(fromHex('1'*8)):
             return cls.deserializeV2(buffer)
         prv = LmsPrivateKey.deserialize(buffer[8:])
         return cls(levels, lms_type=prv.lms_type, lmots_type=prv.lmots_type, \
@@ -978,7 +979,7 @@ class HssPrivateKey(object):
     def deserializeV2(cls, buffer):
         """
         levels - 4 bytes
-        padding of all zeros - 4 bytes
+        padding of all ones - 4 bytes
         [root key_length in bytes + root key]
         [signature_length in bytes + signature + key_length in bytes + key]... for each additional level's private key
         """
