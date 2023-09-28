@@ -646,7 +646,7 @@ class LmsPrivateKey(object):
             raise ValueError(err_algorithm_mismatch, alg + ' and ' + alg2)
         SEED = buffer[8:8+n]
         I = buffer[8+n:8+n+LenI]
-        q = int32(buffer[8+n+LenI:8+n+LenI+4])
+        q = int32(buffer[8+n+LenI:8+n+LenI+LenQ])
         return cls(lms_type, lmots_type, SEED, I, q)
 
     def path(self, node_num):
