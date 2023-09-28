@@ -167,6 +167,7 @@ err_bad_value             = 'parameter has unknown value'
 err_bad_number_of_levels  = 'unsupported number of levels'
 err_private_key_exhausted = 'private key is exhausted'
 err_algorithm_mismatch    = 'LMOTS and LMS with different hash algorithms'
+err_prv_key_deserialize   = 'root private key not recognized'
 
 # ----------------------------------------------------------------------
 # The internal utility routines
@@ -869,7 +870,7 @@ class HssPrivateKey(object):
     """
     def __init__(self, levels=2, lms_type=lms_sha256_m32_h5,
                  lmots_type=lmots_sha256_n32_w8, SEED=None,
-                 remaining_signatures=None, prv0=None):
+                 remaining_signatures=None, prvs=None, sigs=None):
         if levels < 1 or levels > MaxHssLevels:
             ValueError(err_bad_number_of_levels, str(levels))
         if lmots_type not in lmots_params:
@@ -889,17 +890,22 @@ class HssPrivateKey(object):
             if len(SEED) != n:
                 raise ValueError(err_bad_length, str(len(SEED)))
             self.SEED = SEED
-        if prv0 is None:
-            prv0 = LmsPrivateKey(lms_type=lms_type,
-                                 lmots_type=lmots_type, SEED=SEED)
-        self.prv = [prv0]
+        if prvs is None:
+            prvs = [LmsPrivateKey(lms_type=lms_type,
+                                 lmots_type=lmots_type, SEED=SEED)]
+        self.prv = prvs
         if remaining_signatures is None:
             self._signatures_remaining = 2**(levels*h)
         else:
             self._signatures_remaining = remaining_signatures
-        self.pub = [prv0.publicKey()]
-        self.sig = []
-        for i in range(1, self.levels):
+        self.pub = []
+        for i in range(0, len(self.prv)):
+            self.pub.append(prvs[i].publicKey())
+        if sigs is None:
+            self.sig = []
+        else:
+            self.sig = sigs
+        for i in range(len(self.prv), self.levels):
             self.prv.append(LmsPrivateKey(
                 lms_type=lms_type, lmots_type=lmots_type, SEED=SEED))
             self.pub.append(self.prv[-1].publicKey())
@@ -943,8 +949,18 @@ class HssPrivateKey(object):
 
     def serialize(self):
         assert self._signatures_remaining.bit_length() <= 32, "_signatures_remaining=0x%x, %d bits"%(self._signatures_remaining,self._signatures_remaining.bit_length())
-        return u32(self.levels) + u32(self._signatures_remaining) + \
-               self.prv[0].serialize()
+        
+        rv = u32(self.levels) + u32(0)
+        serialized_prv0 = self.prv[0].serialize()
+        rv += u32(len(serialized_prv0)) + serialized_prv0
+
+        # all non-root keys and associated signatures
+        for i in range(1, len(self.prv)):
+            sig = self.sig[i - 1]
+            prv = self.prv[i]
+            serialized_prv = prv.serialize()
+            rv += u32(len(sig)) + sig + u32(len(serialized_prv)) + serialized_prv
+        return rv
 
     @classmethod
     def deserialize(cls, buffer):
@@ -952,9 +968,56 @@ class HssPrivateKey(object):
             raise ValueError(err_bad_length, str(len(buffer)))
         levels = int32(buffer[0:4])
         rs = int32(buffer[4:8])
+        if rs == 0:
+            return cls.deserializeV2(buffer)
         prv = LmsPrivateKey.deserialize(buffer[8:])
         return cls(levels, lms_type=prv.lms_type, lmots_type=prv.lmots_type, \
-                   remaining_signatures=rs, prv0=prv)
+                   remaining_signatures=rs, prvs=[prv])
+
+    @classmethod
+    def deserializeV2(cls, buffer):
+        """
+        levels - 4 bytes
+        padding of all zeros - 4 bytes
+        [root key_length in bytes + root key]
+        [signature_length in bytes + signature + key_length in bytes + key]... for each additional level's private key
+        """
+        if len(buffer) < 8:
+            raise ValueError(err_bad_length, str(len(buffer)))
+        levels = int32(buffer[0:4])
+        padding = int32(buffer[4:8])
+
+        remaining_signatures = 0
+        prvs = []
+        sigs = []
+        read_bytes = 8
+        while read_bytes < len(buffer):
+            if len(prvs) > 0:
+                # for every key after the root key
+                sig_length = int32(buffer[read_bytes:read_bytes+4])
+                read_bytes += 4
+                sig = buffer[read_bytes:read_bytes+sig_length]
+                read_bytes += sig_length
+                sigs.append(sig)
+            key_length = int32(buffer[read_bytes:read_bytes+4])
+            read_bytes += 4
+            prv = LmsPrivateKey.deserialize(buffer[read_bytes:read_bytes+key_length])
+            read_bytes += key_length
+            prvs.append(prv)
+
+            # Calculate how many remaining signatures this key can generate for us
+            # We need to account for how many levels of keys the current key can generate, and how much each use of a key is "worth"
+            # to be able to calculate how many effective signatures we've expended so far per key.
+            # Based off: 2**(self.levels*h)
+            alg2, m, h = lms_params[prv.lms_type]
+            remaining_signatures_from_key = 2**((levels-len(prvs)+1)*h) - ((2**((levels-len(prvs))*h)*(prv.maxSignatures()-prv.remaining())))
+            remaining_signatures += remaining_signatures_from_key
+        if len(prvs) < 1:
+            raise ValueError(err_prv_key_deserialize)
+        if len(sigs) < 1:
+            sigs = None
+        return cls(levels, lms_type=prvs[0].lms_type, lmots_type=prvs[0].lmots_type, \
+                   remaining_signatures=remaining_signatures, prvs=prvs, sigs=sigs)
 
     def prettyPrint(self):
         rv = "HSS private key\n"

@@ -302,6 +302,28 @@ class TestHSS(unittest.TestCase):
         self.assertIn('I         : ee9a2418209ce10bc035de0f55c5eecf', pubpp)
         self.assertIn('K         : a3894ff49d2fa0e4a85b214f7c155901', pubpp)
 
+    def testExhaustedSign(self):
+        msg = toBytes('The way to get started is to quit talking and ' + \
+                      'begin doing.')
+        prv = pyhsslms.HssPrivateKey(levels=2)
+        self.assertEqual(prv.remaining(), 1024)
+        sigbuffer = prv.sign(msg)
+        self.assertEqual(prv.remaining(), 1023)
+    
+    def testSerializeDeserialize(self):
+        msg = toBytes('The way to get started is to quit talking and ' + \
+                      'begin doing.')
+        prv = pyhsslms.HssPrivateKey(levels=2)
+        self.assertEqual(prv.remaining(), 1024)
+        for i in range(0, 10):
+            prv.sign(msg)
+        self.assertEqual(prv.remaining(), 1014)
+        prv_serialized = prv.serialize()
+        prv_deserialized = pyhsslms.HssPrivateKey.deserialize(prv_serialized)
+        self.assertEqual(prv_deserialized.remaining(), 1014)
+        self.assertEqual(prv.prettyPrint(), prv_deserialized.prettyPrint())
+
+
     def testSmallRandomPrivateKey(self):
         msg = toBytes('The way to get started is to quit talking and ' + \
                       'begin doing.')
