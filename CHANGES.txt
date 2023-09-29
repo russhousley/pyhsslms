@@ -49,3 +49,11 @@ Revision 1.1.1, released 9-Jan-2023
 
 - Make it easier to run test from the command line (Contribution by
   sebastien-riou).
+
+Revision 2.0.0, released ???-Oct-2023
+------------------------------------
+
+- Correctly calculate the the size of the LMOTS public key during
+  deserialization (Contribution by joshuayuen99).
+
+- Add tests for the coef function.

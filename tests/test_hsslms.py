@@ -47,6 +47,15 @@ def mangle(buffer, offset=30):
     return buffer[0:offset] + fromHex(hex_byte) + buffer[offset+1:]
 
 
+class TestCoef(unittest.TestCase):
+
+    def testCoef(self):
+        S = fromHex('1234')
+        self.assertEqual('1234', toHex(S))
+        self.assertEqual(0, coef(S, 7, 1))
+        self.assertEqual(1, coef(S, 0, 4))
+
+
 class TestHash(unittest.TestCase):
 
     def testSHA256(self):
