@@ -947,9 +947,7 @@ class HssPrivateKey(object):
         alg2, m, h = lms_params[self.lms_type]
         return 2**(self.levels*h)
 
-    def serialize(self):
-        # assert self._signatures_remaining.bit_length() <= 32, "_signatures_remaining=0x%x, %d bits"%(self._signatures_remaining,self._signatures_remaining.bit_length())
-        
+    def serialize(self):        
         # make sure to maintain 4-byte padding of all 1's to indicate we should use deserializeV2
         rv = u32(self.levels) + fromHex('1'*8)
         serialized_prv0 = self.prv[0].serialize()
@@ -1031,6 +1029,7 @@ class HssPrivateKey(object):
             rv += ("   SEED      : %s\n" % toHex(prv.SEED))
             rv += ("   q         : %s\n" % toHex(u32(prv.q)))
             rv += ("   pub       : %s\n" % toHex(prv.pub))
+        rv += ("   sigs left : %d\n" % self.remaining())
         rv += ("   max signs : %d\n" % self.maxSignatures())
         return rv
 
