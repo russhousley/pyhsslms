@@ -53,7 +53,23 @@ Revision 1.1.1, released 9-Jan-2023
 Revision 2.0.0, released ???-Oct-2023
 ------------------------------------
 
+- Introduced new HssPrivateKey serialization scheme that allows significantly
+  larger keys to be generated. Previously, only keys that allowed for a total of
+  32-bit length signature uses were possible. This change does not break
+  reverse-compatibility for keys generated using the old serialization scheme.
+  (Contribution by joshuayuen99).
+
+- Correctly generate the LMOTS public key from a given LMOTS private
+  key (Contribution by joshuayuen99).
+
+- Correctly sign messages with LMOTS private keys
+  (Contribution by joshuayuen99).
+
 - Correctly calculate the the size of the LMOTS public key during
   deserialization (Contribution by joshuayuen99).
+
+- Refactor "S" field within LmotsSignature, LmotsPrivateKey, and
+  LmotsPublicKey to "I" and "q" components as per the final RFC
+  (Contribution by joshuayuen99).
 
 - Add tests for the coef function.
