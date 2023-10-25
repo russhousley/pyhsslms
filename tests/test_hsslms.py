@@ -39,7 +39,7 @@ import os
 import tempfile
 import unittest
 from pyhsslms import *
-from pyhsslms.compat import fromHex, toHex, toBytes, charNum, u8
+from pyhsslms.compat import fromHex, toHex, toBytes, charNum, u8, u32
 
 
 def mangle(buffer, offset=30):
@@ -93,6 +93,8 @@ class TestLMOTS(unittest.TestCase):
 
     def testBuildPublic(self):
         S = fromHex('61a5d57d37f5e46bfb7520806b07a1b800000005')
+        I = S[:pyhsslms.LenI]
+        q = S[pyhsslms.LenI:pyhsslms.LenI+pyhsslms.LenQ]
         msg = fromHex('0000000500000004d2f14ff6346af964569f7d6cb880a1b66' + \
          'c5004917da6eafe4d9ef6c6407b3db0e5485b122d9ebe15cda93cfec582d7ab')
         buf = fromHex( '00000004d32b56671d7eb98833c49b433c272586bc' + \
@@ -135,16 +137,18 @@ class TestLMOTS(unittest.TestCase):
         expected_pub = fromHex('87be83923a22106731e8f10f826faf4d02' + \
          '17b07d99694d1174d350fba7d578a1')
         sig = pyhsslms.LmotsSignature.deserialize(buf)
-        pub = sig.buildPublic(S, msg)
+        pub = sig.buildPublic(I, q, msg)
         self.assertEqual(expected_pub, pub)
 
     def testKnownPrivateKey(self):
         msg = toBytes('The way to get started is to quit talking and ' + \
                       'begin doing.')
         S = fromHex('c6d47a98577cd2f13007908fd14309ca00000001')
+        I = S[:pyhsslms.LenI]
+        q = S[pyhsslms.LenI:pyhsslms.LenI+pyhsslms.LenQ]
         seed = fromHex('1e305866bfc4d18c4735bfc677711109' + \
                              'a886656dc432e39281bc5a129b518172')
-        prv = pyhsslms.LmotsPrivateKey(S=S, SEED=seed)
+        prv = pyhsslms.LmotsPrivateKey(I=I, q=q, SEED=seed)
         self.assertEqual(1, prv.remaining())
         self.assertFalse(prv.is_exhausted())
         sigbuffer = prv.sign(msg)
@@ -159,10 +163,34 @@ class TestLMOTS(unittest.TestCase):
         self.assertTrue(sig.prettyPrint())
         prvpp = prv.prettyPrint()
         self.assertIn('LMOTS type: 00000004', prvpp)
-        self.assertIn('S         : c6d47a98577cd2f13007908fd14309ca', prvpp)
+        self.assertIn('I         : c6d47a98577cd2f13007908fd14309ca', prvpp)
         self.assertIn('SEED      : 1e305866bfc4d18c4735bfc677711109', prvpp)
         pubpp = pub.prettyPrint()
-        self.assertIn('S         : c6d47a98577cd2f13007908fd14309ca', pubpp)
+        self.assertIn('I         : c6d47a98577cd2f13007908fd14309ca', pubpp)
+
+    def testPublicKeyGeneration(self):
+        I = fromHex('1'*32)
+        q = u32(123456789)
+        SEED = fromHex('3'*64)
+        lmots_type = lmots_sha256_n32_w2
+
+        prv = pyhsslms.LmotsPrivateKey(I, q, SEED, lmots_type)
+        pub = prv.publicKey()
+
+        expected_pub_bytes = fromHex('00000002' + \
+            # I - 16 bytes
+            '11111111111111111111111111111111' + \
+            # Q - 32-bit number
+            '075bcd15' + \
+            # KEY
+            '0cc6d68ead0190ad29b4125af6ca9ff1c4f23c4db4524411974653c9fb0c6e76')
+        expected_pub = pyhsslms.LmotsPublicKey.deserialize(expected_pub_bytes)
+
+        self.assertEqual(pub.type, expected_pub.type)
+        self.assertEqual(pub.I, expected_pub.I)
+        self.assertEqual(pub.q, expected_pub.q)
+        self.assertEqual(pub.K, expected_pub.K)
+        self.assertEqual(pub.serialize(), expected_pub.serialize())
 
     def testRandomPrivateKey(self):
         msg = toBytes('The way to get started is to quit talking and ' + \
@@ -208,10 +236,10 @@ class TestLMS(unittest.TestCase):
         self.assertIn('LMOTS type: 00000004', prvpp)
         self.assertIn('I         : e4a9fccb86dc9c49d71b72d5696acb54', prvpp)
         self.assertIn('SEED      : 0c0fe552dcf77d4bbe16b28605759ea4', prvpp)
-        self.assertIn('pub       : a8b35f4c521183a05d81fbcf8a81ffc9', prvpp)
+        self.assertIn('pub       : 7468c0058fc7e1dd87aef69fa5bbf1fc', prvpp)
         pubpp = pub.prettyPrint()
         self.assertIn('I         : e4a9fccb86dc9c49d71b72d5696acb54', pubpp)
-        self.assertIn('K         : a8b35f4c521183a05d81fbcf8a81ffc9', pubpp)
+        self.assertIn('K         : 7468c0058fc7e1dd87aef69fa5bbf1fc', pubpp)
 
     def testRandomPrivateKey(self):
         msg = toBytes('The way to get started is to quit talking and ' + \
@@ -234,7 +262,8 @@ class TestLMS(unittest.TestCase):
         pub = prv.publicKey()
         pubserial = pub.serialize()
         pub2 = pyhsslms.LmotsPublicKey.deserialize(pubserial)
-        self.assertTrue(pub.S == pub2.S)
+        self.assertTrue(pub.I == pub2.I)
+        self.assertTrue(pub.q == pub2.q)
         self.assertTrue(pub.K == pub2.K)
         self.assertTrue(pub.type == pub2.type)
         self.assertTrue(pub.prettyPrint() == pub2.prettyPrint())
@@ -271,7 +300,103 @@ class TestHSS(unittest.TestCase):
         pubpp = pub.prettyPrint()
         self.assertIn('levels    : 2', pubpp)
         self.assertIn('I         : ee9a2418209ce10bc035de0f55c5eecf', pubpp)
-        self.assertIn('K         : c584f571bbfdf285b9a8ac5bafb7738a', pubpp)
+        self.assertIn('K         : a3894ff49d2fa0e4a85b214f7c155901', pubpp)
+
+    def testKnownV2PrivateKey(self):
+        msg = toBytes('The way to get started is to quit talking and ' + \
+                      'begin doing.')
+        buffer = fromHex('00000002111111110000003c0000000500000004f43d39dc2a0dbf22ede8' + \
+            '66b071682c30bdca160d3856d74b9c08be654397dd5db1f91ab94b7d0ec0' + \
+            '4fa184b698ede50c000000010000050c0000000000000004a80d9f386d96' + \
+            'd5c0e70c42e8e19143275f61f83c66fc504a1e57481fae3b3e44ad7b952f' + \
+            '3f4c491a2f47e78d92755bde9c25adb7cbf91e5f3e201d452e6ddb47360f' + \
+            '0bf03b06dd9f1110df25fa291a17f2a9cdd7ca1877b139764342f568bd87' + \
+            '44b7a1cf8e3c7c705c38958b4b41ff803206627f45c614648af55dca3ef5' + \
+            '83daf45eb92f63675709d0d9ec861d0a265ce25f3858dd23cc537fdf85fe' + \
+            'd0cb233aa5df3b8439c7bd031be632dda2d06076c150f2fed1d7da7ce2e3' + \
+            '1c856fe5676a8aa6a3459e75a5ea6154694d5eb9299defda07139d46d279' + \
+            'a1d38d0381f61b899dca2666a78b992945ba6d2fba5d64364d562258c3fb' + \
+            '7962ddc641f7856bdade24f3db10495deb7e648ca20a19ad5f10432aaaae' + \
+            '2dbd42358c8505fca3b948f461e890129991959374e12f125eb4328086fa' + \
+            'a72025e01a5ca9b72e59cb6764193dc5bd84ab09584a4200391fb218244e' + \
+            '1db3e3570821b52489e164287e260b05bb5c08146ec790d3b0fe8a06a5d6' + \
+            'd7c02a8d9d7b1d78d46cee47f7fea98c59ac270335a0b584f4a4d66a799a' + \
+            'a8e7afe56fcdd22fcf5697b7bf846b6b2c6fe928d69d75b6bdc18419410d' + \
+            '93cd6eda972dfd9ef71d64c31117c85d712f5eda7a6db75c4da5a80bbdbb' + \
+            '43b7db062a79357685e8177a6edf01b60a709b75f3745f1759e10807aeb6' + \
+            '06d233ba458958b18e9d08435d81efcb784e201ca16799911d272d8b692b' + \
+            '0dd6ad2fa22f78bc6dc3a3c92b839c942a84b75187f7a3ed6ad4068aaee8' + \
+            '80a43daa25010e75daa5afeeecc709a78ab0852b7d1c2d037419510591a3' + \
+            'd726a238715711a00b84c9f9d45ffc39654096baf6e8e24f3c3c1e419f25' + \
+            '23394d0b93d190e0636cdcbb3e5d0d7d698877d3e01b28d5b82919b0d1ca' + \
+            'e14991b7ac7f743bd6328a415840f7582debc2657b31fdb930980b8420fd' + \
+            '65e3e7ff84459e17663c357f4554ffc678de9c3bc6ec5f482fb21af7cbd9' + \
+            'd039fa82c6fef8cb07b97c31dba402541391a2619753e506dedbf84434b3' + \
+            '323d3e1cfde4ec86301b7d8dbdb585dfd2da0e4c613ff687af52fa6e568f' + \
+            '61be757bce7745c93bbeb35539a984056f45d2c4961828e15cfa0716e37f' + \
+            '697ed59eec11e72e77fdee7e1a0256d88d3b5128478627aefab10491c1c7' + \
+            'f1bee592f93d3d91be68d257a56a5166304bd0afaed0418c0faa5eb1d044' + \
+            '96d31ae6aac9d9dd9efa119b944255e7ab4738d93a36d1a6ae0fbb0b70ef' + \
+            '1bd176215a1799a8634f48f854cfb5248dab2b5e82798d7187571656f9a8' + \
+            'a7e00bceeb736e42b05abee3976a2346fda2848384dc13e5150b8f7adb55' + \
+            'eff76013194459704626e5ea5bf1316c763ad5180977a3ccd92b53f2e162' + \
+            '317465fb2efb60e463c22d76e63db4d6d88130efc69dfbd0957c37d56dfe' + \
+            'c90045b18ca12f45da06c085a279b667793fed11977d79893b38260fd6e3' + \
+            'aec03532f9db500634115eb0a123d9c849eee14298cb940061c2ae8d86c1' + \
+            'a10d0109ceffd767552df22d04507f57edfbeb983afb6c72e2614c7f3621' + \
+            'b16112fef7cd282cdcbd9092cad4bdf347da06a16f5c939effd69467eb85' + \
+            '34823e13000000054ca89ad451211b67dc722c9f954f6ea9be3957853267' + \
+            '19ce7c4f51bfde733e3375c0bcdf3e95d98246bcc47b30af65b6625b83f8' + \
+            'c7f4d9c4501f9fbcac45ceb6bdd8aaaa79d7e1dd4cf79f9780c73378372d' + \
+            'bb6d508bdf444457dc1697cd164dfe9a48b19fa3feff4350dbbf2d902aa3' + \
+            '14b0a0a6dfbd2ea53184664f6741656baf751a68c9fa3954a3508a8c01ba' + \
+            'da7358ce41bf47a7764902dccf137928b6e00000003c0000000500000004' + \
+            '1adbe10213248e5e2ef905276ec18a35fb3aac2a0e7692ad6ccf517bd984' + \
+            'be61e6540e52a69bc44de051c2d20c056a1600000000')                        
+        prv = pyhsslms.HssPrivateKey.deserialize(buffer)
+        self.assertEqual(1024, prv.remaining())
+        sigbuffer = prv.sign(msg)
+        self.assertEqual(2644, len(sigbuffer))
+        self.assertEqual(1023, prv.remaining())
+        self.assertFalse(prv.is_exhausted())
+        sig = pyhsslms.HssSignature.deserialize(sigbuffer)
+        pub = prv.publicKey()
+        self.assertTrue(pub.verify(msg, sigbuffer))
+        self.assertFalse(pub.verify(msg, mangle(sigbuffer)))
+        self.assertFalse(pub.verify(mangle(msg), sigbuffer))
+        self.assertTrue(sig.prettyPrint())
+        prvpp = prv.prettyPrint()
+        self.assertIn('levels    : 2', prvpp)
+        self.assertIn('LMS type  : 00000005', prvpp)
+        self.assertIn('LMOTS type: 00000004', prvpp)
+        self.assertIn('q         : 00000001', prvpp)
+        self.assertIn('I         : b1f91ab94b7d0ec04fa184b698ede50c', prvpp)
+        pubpp = pub.prettyPrint()
+        self.assertIn('levels    : 2', pubpp)
+        self.assertIn('I         : b1f91ab94b7d0ec04fa184b698ede50c', pubpp)
+        self.assertIn('K         : da0d59a80f460f17693c6bec1c6711e0', pubpp)
+
+    def testExhaustedSign(self):
+        msg = toBytes('The way to get started is to quit talking and ' + \
+                      'begin doing.')
+        prv = pyhsslms.HssPrivateKey(levels=2)
+        self.assertEqual(prv.remaining(), 1024)
+        sigbuffer = prv.sign(msg)
+        self.assertEqual(prv.remaining(), 1023)
+    
+    def testSerializeDeserialize(self):
+        msg = toBytes('The way to get started is to quit talking and ' + \
+                      'begin doing.')
+        prv = pyhsslms.HssPrivateKey(levels=2)
+        self.assertEqual(prv.remaining(), 1024)
+        for i in range(0, 64):
+            prv.sign(msg)
+        remaining_sigs = prv.remaining()
+        prv_serialized = prv.serialize()
+        prv_deserialized = pyhsslms.HssPrivateKey.deserialize(prv_serialized)
+        self.assertEqual(prv_deserialized.remaining(), remaining_sigs)
+        self.assertEqual(prv.prettyPrint(), prv_deserialized.prettyPrint())
+
 
     def testSmallRandomPrivateKey(self):
         msg = toBytes('The way to get started is to quit talking and ' + \
