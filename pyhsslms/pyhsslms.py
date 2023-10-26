@@ -11,7 +11,7 @@
 # by another program that allows different tree sizes in the hierarchy.
 #
 #
-# Copyright (c) 2020-2021, Vigil Security, LLC
+# Copyright (c) 2020-2023, Vigil Security, LLC
 # All rights reserved.
 #
 # Redistribution and use, with or without modification, are permitted
@@ -457,7 +457,7 @@ class LmotsPublicKey:
         alg, n, p, w, ls = lmots_params[lmots_type]
         buf_size = 4 + LenI + LenQ + n
         if len(buffer) != buf_size:
-            raise ValueError(err_bad_length, f"{str(len(buffer))} != {buf_size}")
+            raise ValueError(err_bad_length, "buffer size is not " + str(len(buffer)))
         I = buffer[4:4+LenI]
         q = buffer[4+LenI:4+LenI+LenQ]
         K = buffer[4+LenI+LenQ:(4+LenI+LenQ)+n]

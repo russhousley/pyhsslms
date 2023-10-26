@@ -7,7 +7,7 @@
 # in RFC 8554.
 #
 #
-# Copyright (c) 2020-2021, Vigil Security, LLC
+# Copyright (c) 2020-2023, Vigil Security, LLC
 # All rights reserved.
 #
 # Redistribution and use, with or without modification, are permitted
@@ -225,7 +225,6 @@ def main():
             print("Signature in " + filename + ".sig is valid.")
         else:
             print("Signature verification failed!")
-        
 
     if sys.argv[1] == 'showprv':
         if len(sys.argv) < 3:

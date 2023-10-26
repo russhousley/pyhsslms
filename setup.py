@@ -6,7 +6,7 @@
 # defined in RFC 8554.
 #
 #
-# Copyright (c) 2020, Vigil Security, LLC
+# Copyright (c) 2020-2023, Vigil Security, LLC
 # All rights reserved.
 #
 # Redistribution and use, with or without modification, are permitted
@@ -56,6 +56,10 @@ Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
 Programming Language :: Python :: 3.8
+Programming Language :: Python :: 3.9
+Programming Language :: Python :: 3.10
+Programming Language :: Python :: 3.11
+Programming Language :: Python :: 3.12
 Topic :: Security :: Cryptography
 Topic :: Software Development :: Libraries :: Python Modules
 """
