@@ -105,7 +105,7 @@ params.update({
     'url': 'https://github.com/russhousley/pyhsslms',
     'platforms': ['any'],
     'classifiers': [x for x in classifiers.split('\n') if x],
-    'license': 'MIT',
+    'license_files': 'LICENSE.txt',
     'packages': ['pyhsslms'],
     'entry_points': {'console_scripts': ['hsslms = pyhsslms.hsslms:main']},
     'python_requires': '>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*'})
