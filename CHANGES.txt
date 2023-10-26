@@ -1,5 +1,4 @@
 
-
 Revision 1.0.0, released 4-May-2020
 -----------------------------------
 
@@ -50,26 +49,31 @@ Revision 1.1.1, released 9-Jan-2023
 - Make it easier to run test from the command line (Contribution by
   sebastien-riou).
 
-Revision 2.0.0, released ???-Oct-2023
+
+Revision 2.0.0, released 26-Oct-2023
 ------------------------------------
 
-- Introduced new HssPrivateKey serialization scheme that allows significantly
-  larger keys to be generated. Previously, only keys that allowed for a total of
-  32-bit length signature uses were possible. This change does not break
-  reverse-compatibility for keys generated using the old serialization scheme.
-  (Contribution by joshuayuen99).
+- HssPrivateKey serialization supports significantly larger tree sizes.
+  Previous approach allowed for a total of (2**32)-1 signature.  This
+  change does not break compatibility for private keys generated using
+  the old serialization scheme (Contribution by joshuayuen99).
 
-- Correctly generate the LMOTS public key from a given LMOTS private
-  key (Contribution by joshuayuen99).
+- Generate the LMOTS public key from a given LMOTS private key using
+  the approach documented in RFC 8554 (Contribution by joshuayuen99).
 
-- Correctly sign messages with LMOTS private keys
-  (Contribution by joshuayuen99).
+- Correctly sign messages with LMOTS private keys (Contribution by
+  joshuayuen99).
 
 - Correctly calculate the the size of the LMOTS public key during
   deserialization (Contribution by joshuayuen99).
 
-- Refactor "S" field within LmotsSignature, LmotsPrivateKey, and
-  LmotsPublicKey to "I" and "q" components as per the final RFC
+- Refactor "S" argument within LmotsSignature, LmotsPrivateKey, and
+  LmotsPublicKey to "I" and "q" arguments to align with RFC 8554
   (Contribution by joshuayuen99).
 
 - Add tests for the coef function.
+
+- Include support for Classifier: Python 3.9, Python 3.10, Python 3.11,
+  and Python 3.12.
+
+- Update copyright.

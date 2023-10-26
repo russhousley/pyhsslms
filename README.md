@@ -85,5 +85,5 @@ Source code is freely available as a GitHub [repo](https://github.com/russhousle
 
 You could `pip install pyhsslms` or download it from [PyPI](https://pypi.org/project/pyhsslms).
 
-Copyright (c) 2020, Vigil Security, LLC
+Copyright (c) 2020-2023, Vigil Security, LLC
 All rights reserved.
